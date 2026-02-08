@@ -7,7 +7,7 @@ import {
   ElementRef,
   AfterViewInit,
   HostListener,
-  signal, ChangeDetectorRef
+  signal, ChangeDetectorRef, Pipe, PipeTransform
 } from '@angular/core';
 
 import { Environment } from '../environment';
@@ -16,9 +16,26 @@ import { Being, fuzzGenes, Genes, Sex } from '../../models/Being';
 import * as randomUtil from '../../util/random';
 import { Button } from 'primeng/button';
 import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
-import { IsInstanceOfPipe } from '../is-instance-of-pipe';
 
 import config from '../../config';
+import { Toolbar } from 'primeng/toolbar';
+import { IsInstanceOfPipe } from '../is-instance-of-pipe';
+
+type MouseMode = 'select' | 'bomb';
+
+@Pipe({
+  name: 'modeCursor',
+})
+export class EnvironmentCursorPipe implements PipeTransform {
+
+  transform(mode: MouseMode){
+    switch(mode) {
+      case 'select': return 'default';
+      case 'bomb': return 'all-scroll';
+    }
+  }
+
+}
 
 @Component({
   selector: 'app-main-canvas',
@@ -27,8 +44,9 @@ import config from '../../config';
     AsyncPipe,
     JsonPipe,
     DecimalPipe,
-    DatePipe,
-    IsInstanceOfPipe
+    EnvironmentCursorPipe,
+    IsInstanceOfPipe,
+    Toolbar
   ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',
@@ -59,6 +77,8 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   selectedBeing = signal<Being | null>(null);
 
+  mouseMode = signal<MouseMode>('select');
+
   constructor(
     public environmentService: Environment,
     public drawService: Draw,
@@ -70,11 +90,6 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
-
-  // @HostListener('keydown', ['$event'])
-  // onSpaceUp($event: Event) {
-  //   this.togglePause();
-  // }
 
   ngAfterViewInit() {
     this.drawService.initialize(this.canvasRef.nativeElement, this.groupColors);
@@ -113,7 +128,22 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   onCanvasClick($event: MouseEvent) {
     const bounds = this.canvasRef.nativeElement.getBoundingClientRect();
-    const being = this.environmentService.getBeingAt($event.clientX - bounds.left, $event.clientY - bounds.top);
+    const x = $event.clientX - bounds.left;
+    const y = $event.clientY - bounds.top;
+
+    if (this.mouseMode() === 'select') {
+      this.selectBeingAt(x, y);
+    } else {
+      this.bombAreaAt(x, y);
+    }
+  }
+
+  bombAreaAt(x: number, y: number) {
+    this.environmentService.bombArea({ x: x, y: y }, 500, 1000);
+  }
+
+  selectBeingAt(x: number, y: number) {
+    const being = this.environmentService.getBeingAt(x, y);
     this.selectedBeing.set(being);
   }
 

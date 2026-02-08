@@ -1,5 +1,6 @@
 canvas {
   border: 1px solid black;
+  border-top: none;
 }
 
 .canvas-wrapper {
@@ -13,4 +14,8 @@ canvas {
 
 .stats-panel {
 
+}
+
+.selected-tool {
+  filter: brightness(75%);
 }

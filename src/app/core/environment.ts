@@ -103,6 +103,7 @@ export class Environment {
   currentStats = signal<EnvironmentStats>(this.stats);
   beingDied$: Subject<Being> = new Subject<Being>();
   beingBorn$: Subject<Being> = new Subject<Being>();
+  bombDetonated$: Subject<{ position: Position, diameter: number }> = new Subject<{ position: Position, diameter: number }>()
 
   constructor() {
     this.width = 0;
@@ -218,6 +219,11 @@ export class Environment {
   }
 
   update(updatePercentage: number) {
+    if (this.beings.length === 0) {
+      // TODO: Handle better
+      return;
+    }
+
     this.resetStats();
 
     this.positionIndex = new PositionIndex(this.beings);
@@ -242,6 +248,16 @@ export class Environment {
     return this.positionIndex.findClosestTo({ x: x, y: y}, 50);
   }
 
+  bombArea(position: Position, diameter: number, damage: number) {
+    const beingsInArea = this.positionIndex.findWithin(position, diameter / 2);
+
+    this.bombDetonated$.next({ position: position, diameter: diameter });
+
+    for (const being of beingsInArea) {
+      being.hurtBy(damage);
+    }
+  }
+
   startUpdating() {
     if (this.updateTimer) {
       this.stopUpdating();
@@ -261,7 +277,7 @@ export class Environment {
     this.updateTimer = undefined;
   }
 
-  pause() {  // FIXME: Pause is broken again?
+  pause() {  // FIXME: Due-at timers are don't take into consideration pausing
     this.isPaused.set(true);
     this.stopUpdating();
   }

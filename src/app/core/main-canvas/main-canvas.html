@@ -1,9 +1,46 @@
 <div
   class="container-fluid"
-  (keydown.a)="togglePause()"
 >
   <div class="row">
+    <div class="col-8 offset-2">
+      <p-toolbar>
+        <ng-template #start>
+          <div class="d-flex gap-1">
+            <p-button
+              label="Select"
+              (onClick)="this.mouseMode.set('select');"
+              [class.selected-tool]="this.mouseMode() === 'select'"
+            />
+            <p-button
+              label="Bomb"
+              severity="warn"
+              (onClick)="this.mouseMode.set('bomb');"
+              [class.selected-tool]="this.mouseMode() === 'bomb'"
+            />
+          </div>
+        </ng-template>
 
+        <ng-template #center>
+        </ng-template>
+
+        <ng-template #end>
+          <div class="d-flex gap-1">
+            <p-button
+              label="Pause"
+              styleClass="w-100"
+              (onClick)="togglePause()"
+            />
+
+            <p-button
+              label="Debug"
+              styleClass="w-100"
+              (onClick)="toggleDebugMode()"
+              severity="warn"
+            />
+          </div>
+        </ng-template>
+      </p-toolbar>
+    </div>
   </div>
 
   <div class="row">
@@ -38,6 +75,7 @@
           [height]="gameHeight()"
           #canvas
           (click)="onCanvasClick($event)"
+          [style.cursor]="mouseMode() | modeCursor"
         ></canvas>
       </div>
 
@@ -46,18 +84,7 @@
     <div class="col-2">
       <div class="d-flex flex-column gap-5 ms-2">
         <div class="d-flex flex-column gap-1">
-          <p-button
-            label="Pause"
-            styleClass="w-100"
-            (onClick)="togglePause()"
-          />
 
-          <p-button
-            label="Debug"
-            styleClass="w-100"
-            (onClick)="toggleDebugMode()"
-            severity="warn"
-          />
         </div>
 
 
@@ -85,7 +112,7 @@
   </div>
 
   <div class="row">
-    <div class="col-3">
+    <div class="col-12">
 
     </div>
   </div>

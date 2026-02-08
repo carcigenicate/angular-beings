@@ -120,6 +120,10 @@ export class Being {
     }
   }
 
+  hurtBy(damage: number) {
+    this.health = Math.max(0, this.health - damage);
+  }
+
   impregnate(mother: Being, pregnancyDuration: number) {
     if (!mother.pregnancy) {
       mother.pregnancy = {

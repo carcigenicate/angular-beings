@@ -1,7 +1,7 @@
 import { effect, Injectable, OnDestroy, signal } from '@angular/core';
 import { Being } from '../models/Being';
 import { Environment } from './environment';
-import { Subscription } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 
 type DrawFunction = (ctx: CanvasRenderingContext2D) => void;
 
@@ -39,7 +39,9 @@ export class Draw implements OnDestroy {
     });
 
     this.subs.add(
-      this.environmentService.beingDied$.subscribe((being) => {
+      this.environmentService.beingDied$.pipe(
+        filter(() => this.environmentService.isDebugMode()),
+      ).subscribe((being) => {
         const { position, genes: { size }} = being;
         const effectSize = size * 5;
 
@@ -56,7 +58,9 @@ export class Draw implements OnDestroy {
     );
 
     this.subs.add(
-      this.environmentService.beingBorn$.subscribe((being) => {
+      this.environmentService.beingBorn$.pipe(
+        filter(() => this.environmentService.isDebugMode()),
+      ).subscribe((being) => {
         const { position, genes: { size }} = being;
         const effectSize = size * 5;
 
@@ -76,6 +80,18 @@ export class Draw implements OnDestroy {
         });
       })
     );
+
+    this.subs.add(
+      this.environmentService.bombDetonated$.subscribe(({ position, diameter }) => {
+        this.startPersistentEffect(2000, (ctx: CanvasRenderingContext2D) => {
+          ctx.strokeStyle = '#FF0000';
+          ctx.lineWidth = 5;
+          ctx.beginPath();
+          ctx.arc(position.x, position.y, diameter / 2, 0,  2 * Math.PI);
+          ctx.stroke();
+        });
+      }),
+    )
   }
 
   initialize(canvas: HTMLCanvasElement, groupColors: Record<string, string>) {

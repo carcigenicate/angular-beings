@@ -1,7 +1,79 @@
-<div>
-  <canvas
-    [width]="gameWidth()"
-    [height]="gameHeight()"
-    #canvas
-  ></canvas>
+<div class="container-fluid">
+  <div class="row">
+
+  </div>
+
+  <div class="row">
+    <div class="col-10 offset-1">
+      <canvas
+        [width]="gameWidth()"
+        [height]="gameHeight()"
+        #canvas
+        (click)="onCanvasClick($event)"
+      ></canvas>
+    </div>
+
+    <div class="col-1">
+      <div class="d-flex flex-column gap-5 ms-2">
+        <div class="d-flex flex-column gap-1">
+          <p-button
+            label="Pause"
+            styleClass="w-100"
+            (onClick)="togglePause()"
+          />
+
+          <p-button
+            label="Debug"
+            styleClass="w-100"
+            (onClick)="toggleDebugMode()"
+            severity="warn"
+          />
+        </div>
+
+
+        @let being = selectedBeing();
+        @if (being) {
+          <div
+            class="selection-panel d-flex flex-column gap-1"
+          >
+            <span>Health: {{ being.health }}</span>
+            <span>Position: {{ being.position.x | number:'1.1-1' }}, {{ being.position.y | number:'1.1-1' }}</span>
+            <span>Destination:
+              @if (being.destination | isInstanceOf:Being) {
+                <span>b {{ being.destination.position.x | number:'1.1-1' }}, {{ being.destination.position.y | number:'1.1-1' }}</span>
+              } @else {
+                <span>p {{ being.destination.x | number:'1.1-1' }}, {{ being.destination.y | number:'1.1-1' }}</span>
+              }
+            </span>
+            <span> {{ being.sex }}</span>
+            <span>{{ being.genes | json }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-panel row">
+    @let stats = environmentService.currentStats();
+    <div class="col-3">
+      <div class="d-flex flex-column gap-1">
+        <span># Targeting Beings: {{ stats?.beingsTargetingBeing?.length }}</span>
+        <span># Targeting Space: {{ stats?.beingsTargetingSpace?.length }}</span>
+        <span>Frame #: {{ drawService.frameCount() }}</span>
+      </div>
+    </div>
+
+    <div class="col-2">
+      <div class="d-flex flex-column gap-1">
+        <pre>{{ stats?.groupCount | json }}</pre>
+      </div>
+    </div>
+
+    <div class="col-2">
+      <div class="d-flex flex-column gap-1">
+        <pre>{{ stats?.sexCount | json }}</pre>
+      </div>
+    </div>
+  </div>
+
 </div>

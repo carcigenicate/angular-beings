@@ -1,11 +1,85 @@
 import { Injectable, signal } from '@angular/core';
 
 import _ from 'lodash';
+import Fatbrush from 'flatbush';
 
-import { Being, Genes } from '../models/Being';
+import { Being, Genes, Sex } from '../models/Being';
 import * as randomUtil from '../util/random';
 import * as mathUtil from '../util/math';
 import { Position } from '../models/Misc';
+
+class PositionIndex {
+  private indexLookup: Record<string, Being>;
+  private index: Fatbrush;
+
+  constructor(beings: Being[]) {
+    this.index = new Fatbrush(beings.length);
+    this.indexLookup = {};
+
+    for (const being of beings) {
+      const halfSize = being.genes.size / 2;
+      const { x, y } = being.position;
+
+      const i = this.index.add(x - halfSize,  y - halfSize, x + halfSize, y + halfSize);
+      this.indexLookup[i] = being;
+    }
+
+    this.index.finish();
+  }
+
+  findColliding(being: Being) {
+    const halfSize = being.genes.size / 2;
+    const { x, y } = being.position;
+
+    const found = this.index.search(x - halfSize,  y - halfSize, x + halfSize, y + halfSize, (neighborI) => {
+      const neighborBeing = this.indexLookup[neighborI];
+      return neighborBeing !== being;
+    });
+
+    return found.map((i) => this.indexLookup[i]);
+  }
+
+  findWithin(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)): Being[] {
+    const { x, y } = position;
+
+    const foundWithin = this.index.search(x - radii, y - radii, x + radii, y + radii, (i) => {
+      const being = this.indexLookup[i];
+      return predicate(being);
+    });
+
+    return foundWithin.map((i) => this.indexLookup[i])
+  }
+
+  findClosestTo(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)): Being | null {
+    const foundWithinBeings = this.findWithin(position, radii, predicate);
+
+    let minDist = Infinity;
+    let closestBeing: Being | null = null;
+    for (const neighborBeing of foundWithinBeings) {
+      const dist = mathUtil.distanceTo(position, neighborBeing.position);
+      if (closestBeing === null || dist < minDist) {
+        closestBeing = neighborBeing;
+        minDist = dist;
+      }
+    }
+
+    return closestBeing;
+  }
+
+  getRandomNear(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)) {
+    const foundWithinBeings = this.findWithin(position, radii, predicate);
+
+    return randomUtil.selectRandom(foundWithinBeings);
+  }
+
+}
+
+export interface EnvironmentStats {
+  beingsTargetingSpace: Being[];
+  beingsTargetingBeing: Being[];
+  groupCount: Record<string, number>;
+  sexCount: {[sex in Sex]: number};
+}
 
 @Injectable()
 export class Environment {
@@ -14,14 +88,22 @@ export class Environment {
 
   beings: Being[] = [];
 
+  private stats!: EnvironmentStats;
+
   updateTimer?: ReturnType<typeof setInterval>;
   lastUpdateTimestamp: number = Date.now().valueOf();
 
-  isPaused = signal(true);
+  positionIndex!: PositionIndex;
+
+  isPaused = signal<boolean>(true);
+  isDebugMode = signal<boolean>(false);
+  currentStats = signal<EnvironmentStats>(this.stats);
 
   constructor() {
     this.width = 0;
     this.height = 0;
+
+    this.resetStats();
   }
 
   initialize(width: number, height: number, beings: Being[]) {
@@ -29,34 +111,110 @@ export class Environment {
     this.height = height;
     this.beings = beings;
 
+    this.positionIndex = new PositionIndex(this.beings);
+
     this.startUpdating();
   }
 
-  updateBeing(being: Being, updatePercentage: number) {
-    being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
+  resetStats() {
+    this.stats = {
+      beingsTargetingBeing: [],
+      beingsTargetingSpace: [],
+      groupCount: {},
+      sexCount: { male: 0, female: 0 },
+    };
+  }
 
-    if (mathUtil.distanceTo(being.position, being.getDestinationPosition()) < being.genes.speed) {
-      if (randomUtil.randomInt(0, 1) === 1) {
-        being.destination = randomUtil.randomPosition(this.width, this.height);
-      } else {
-        being.destination = randomUtil.selectRandom(this.beings);
+  recordBeingStats(being: Being) {
+    if (being.destination instanceof Being) {
+      this.stats.beingsTargetingBeing.push(being);
+    } else {
+      this.stats.beingsTargetingSpace.push(being);
+    }
+
+    this.stats.groupCount[being.group] ??= 0;
+    this.stats.groupCount[being.group] += 1;
+
+    this.stats.sexCount[being.sex] += 1;
+  }
+
+  resolveCollisions(being: Being, collidingBeings: Being[]) {
+
+  }
+
+  isOutOfBounds(being: Being) {
+    const { x, y } = being.position;
+
+    const xIsOob = x < 0 || x >= this.width;
+    const yIsOob = y < 0 || y >= this.height;
+
+    return xIsOob || yIsOob;
+  }
+
+  assignNewDestination(being: Being) {
+    const closestNonAlly = this.positionIndex.getRandomNear(being.position, Math.max(this.width, this.height) / 4, (neighbor) => {
+      return neighbor.group !== being.group && being !== neighbor;
+    });
+
+    if (closestNonAlly) {
+      being.assignNewTemporaryTargetBeing(closestNonAlly, randomUtil.randomInt(1000, 5000));
+    } else {
+      being.destination = randomUtil.randomPosition(this.width, this.height);
+    }
+  }
+
+  updateDestination(being: Being) {
+    const currentTime = Date.now();
+    if (being.forceRandomPositionAt && currentTime >= being.forceRandomPositionAt) {
+      being.destination = randomUtil.randomPosition(this.width, this.height);
+      delete being.forceRandomPositionAt;
+    } else {
+      if (mathUtil.distanceTo(being.position, being.getDestinationPosition()) <= 1) {
+        this.assignNewDestination(being);
       }
     }
   }
 
-  update(updatePercentage: number) {
-    for (const being of this.beings) {
-      this.updateBeing(being, updatePercentage);
+  updateBeing(being: Being, updatePercentage: number) {
+    being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
+    // being.position = mathUtil.clampPositionToBounds(being.position, this.width, this.height);
+
+    this.updateDestination(being);
+
+    if (this.isOutOfBounds(being)) {
+      being.position = { x: this.width / 2, y: this.height / 2 };
     }
   }
 
+  update(updatePercentage: number) {
+    this.resetStats();
+
+    this.positionIndex = new PositionIndex(this.beings);
+
+    for (const being of this.beings) {
+      this.updateBeing(being, updatePercentage);
+      this.recordBeingStats(being);
+    }
+
+    this.currentStats.set(this.stats);
+  }
+
+  getBeingAt(x: number, y: number): Being | null {
+    return this.positionIndex.findClosestTo({ x: x, y: y}, 50);
+  }
+
   startUpdating() {
+    if (this.updateTimer) {
+      this.stopUpdating();
+    }
+
     this.updateTimer = setInterval(() => {
       const currentTimestamp = Date.now().valueOf();
-      const updatePerc = 1 / (this.lastUpdateTimestamp - currentTimestamp);
+      const updatePerc = (currentTimestamp - this.lastUpdateTimestamp) / 1000;
 
-      this.update(/*updatePerc*/1);
-    }, 10)
+      this.update(updatePerc);
+      this.lastUpdateTimestamp = Date.now().valueOf();
+    }, 30)
   }
 
   stopUpdating() {

@@ -1,13 +1,33 @@
-import { Component, OnDestroy, OnInit, input, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  input,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  HostListener,
+  signal, ChangeDetectorRef
+} from '@angular/core';
 
 import { Environment } from '../environment';
 import { Draw } from '../draw';
 import { Being, Genes } from '../../models/Being';
 import * as randomUtil from '../../util/random';
+import { Button } from 'primeng/button';
+import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
+import { IsInstanceOfPipe } from '../is-instance-of-pipe';
 
 @Component({
   selector: 'app-main-canvas',
-  imports: [],
+  imports: [
+    Button,
+    AsyncPipe,
+    JsonPipe,
+    DecimalPipe,
+    DatePipe,
+    IsInstanceOfPipe
+  ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',
   providers: [
@@ -29,26 +49,29 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   startingGenes: Genes = {
     maxHealth: 100,
-    size: 25,
-    speed: 5,
+    size: 5,
+    speed: 500,
     strength: 1,
   }
 
+  selectedBeing = signal<Being | null>(null);
+
   constructor(
-    private environmentService: Environment,
-    private drawService: Draw,
+    public environmentService: Environment,
+    public drawService: Draw,
   ) {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(100, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
 
   ngAfterViewInit() {
+    console.log('Draw service initializing')
     this.drawService.initialize(this.canvasRef.nativeElement, this.groupColors);
-
+    console.log('Draw service initialized')
     this.environmentService.resume();
   }
 
@@ -69,7 +92,27 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     return beings;
   }
 
+  togglePause() {
+    if (this.environmentService.isPaused()) {
+      this.environmentService.resume();
+    } else {
+      this.environmentService.pause();
+    }
+  }
+
+  toggleDebugMode() {
+    this.environmentService.isDebugMode.update((isDebugMode) => !isDebugMode);
+  }
+
+  onCanvasClick($event: MouseEvent) {
+    const bounds = this.canvasRef.nativeElement.getBoundingClientRect();
+    const being = this.environmentService.getBeingAt($event.clientX - bounds.left, $event.clientY - bounds.top);
+    this.selectedBeing.set(being);
+  }
+
   ngOnDestroy(): void {
 
   }
+
+  protected readonly Being = Being;
 }

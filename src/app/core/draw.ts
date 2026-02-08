@@ -1,4 +1,4 @@
-import { effect, Injectable } from '@angular/core';
+import { effect, Injectable, signal } from '@angular/core';
 import { Being } from '../models/Being';
 import { Environment } from './environment';
 
@@ -10,6 +10,8 @@ export class Draw {
   lastDrawTimestamp: number = 0;
 
   isDrawing: boolean = false;
+
+  frameCount = signal<number>(0);
 
   constructor(
     private environmentService: Environment,
@@ -41,11 +43,9 @@ export class Draw {
       throw new Error(`Unknown group ${group}`);
     }
 
+    ctx.strokeStyle = '#000000';
     ctx.fillStyle = color;
     ctx.fillRect(x, y, size, size);
-
-    const { x: destX, y: destY } = being.getDestinationPosition();
-    ctx.strokeText(`D: ${destX},${destY}`, destX, destY);
 
     ctx.restore();
   }
@@ -54,11 +54,43 @@ export class Draw {
     const beings = this.environmentService.beings;
 
     const ctx = this.ctx;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     for (const being of beings) {
+      this.frameCount.update((count) => count + 1);
+
+      const { position: { x, y }, genes: { size }} = being;
+      const { x: destX, y: destY } = being.getDestinationPosition();
+      const halfSize = size / 2;
+
+      if (this.environmentService.isDebugMode()) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+
+        ctx.beginPath();
+        ctx.moveTo(being.position.x, being.position.y);
+        ctx.lineTo(destX, destY);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+
+        const colliding = this.environmentService.positionIndex.findColliding(being);
+        for (const collidingBeing of colliding) {
+          ctx.save();
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillText('COLLIDING!', collidingBeing.position.x, collidingBeing.position.y);
+
+          ctx.restore();
+        }
+      }
+
+      ctx.save();
+      // ctx.translate(-size, -size);
+
       this.drawBeing(being);
+
+      ctx.restore();
     }
 
     this.lastDrawTimestamp = timestamp;

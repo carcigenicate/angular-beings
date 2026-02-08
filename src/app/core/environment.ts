@@ -8,6 +8,9 @@ import * as randomUtil from '../util/random';
 import * as mathUtil from '../util/math';
 import { Position } from '../models/Misc';
 
+import config from '../config';
+import { BehaviorSubject, Subject } from 'rxjs';
+
 class PositionIndex {
   private indexLookup: Record<string, Being>;
   private index: Fatbrush;
@@ -98,6 +101,8 @@ export class Environment {
   isPaused = signal<boolean>(true);
   isDebugMode = signal<boolean>(false);
   currentStats = signal<EnvironmentStats>(this.stats);
+  beingDied$: Subject<Being> = new Subject<Being>();
+  beingBorn$: Subject<Being> = new Subject<Being>();
 
   constructor() {
     this.width = 0;
@@ -138,8 +143,20 @@ export class Environment {
     this.stats.sexCount[being.sex] += 1;
   }
 
-  resolveCollisions(being: Being, collidingBeings: Being[]) {
+  resolveCollisions(being: Being) {
+    const allCollidingBeings = this.positionIndex.findColliding(being);
 
+    for (const collidingBeing of allCollidingBeings) {
+      if (being.group === collidingBeing.group) {
+        if (being.sex !== collidingBeing.sex) {
+          const [[male], [female]] = _.partition([being, collidingBeing], (b) => b.sex === 'male');
+
+          male.impregnate(female, config.PREGNANCY_DURATION);
+        }
+      } else {
+        being.attack(collidingBeing);
+      }
+    }
   }
 
   isOutOfBounds(being: Being) {
@@ -157,7 +174,7 @@ export class Environment {
     });
 
     if (closestNonAlly) {
-      being.assignNewTemporaryTargetBeing(closestNonAlly, randomUtil.randomInt(1000, 5000));
+      being.assignNewTemporaryTargetBeing(closestNonAlly, randomUtil.randomInt(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME));
     } else {
       being.destination = randomUtil.randomPosition(this.width, this.height);
     }
@@ -176,14 +193,28 @@ export class Environment {
   }
 
   updateBeing(being: Being, updatePercentage: number) {
+    const currentTime = Date.now();
+
     being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
-    // being.position = mathUtil.clampPositionToBounds(being.position, this.width, this.height);
 
     this.updateDestination(being);
+
+    if (being.pregnancyIsDue()) {
+      const child = being.produceChild();
+      this.beings.push(child);
+      this.beingBorn$.next(child);
+    }
 
     if (this.isOutOfBounds(being)) {
       being.position = { x: this.width / 2, y: this.height / 2 };
     }
+
+    this.resolveCollisions(being);
+  }
+
+  removeBeings(beingIds: string[]) {
+    const removeBeingSet = new Set<string>(beingIds);
+    this.beings = this.beings.filter((being) => !removeBeingSet.has(being.id));
   }
 
   update(updatePercentage: number) {
@@ -191,10 +222,18 @@ export class Environment {
 
     this.positionIndex = new PositionIndex(this.beings);
 
+    const beingsToRemove: string[] = []
     for (const being of this.beings) {
       this.updateBeing(being, updatePercentage);
       this.recordBeingStats(being);
+
+      if (being.isDead()) {
+        beingsToRemove.push(being.id);
+        this.beingDied$.next(being);
+      }
     }
+
+    this.removeBeings(beingsToRemove);
 
     this.currentStats.set(this.stats);
   }
@@ -222,7 +261,7 @@ export class Environment {
     this.updateTimer = undefined;
   }
 
-  pause() {
+  pause() {  // FIXME: Pause is broken again?
     this.isPaused.set(true);
     this.stopUpdating();
   }

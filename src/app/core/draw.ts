@@ -1,9 +1,17 @@
-import { effect, Injectable, signal } from '@angular/core';
+import { effect, Injectable, OnDestroy, signal } from '@angular/core';
 import { Being } from '../models/Being';
 import { Environment } from './environment';
+import { Subscription } from 'rxjs';
+
+type DrawFunction = (ctx: CanvasRenderingContext2D) => void;
+
+interface PersistentEffect {
+  expiresAt: number;
+  drawF: DrawFunction;
+}
 
 @Injectable()
-export class Draw {
+export class Draw implements OnDestroy {
 
   canvas!: HTMLCanvasElement;
   groupColors: Record<string, string> = {};
@@ -11,7 +19,11 @@ export class Draw {
 
   isDrawing: boolean = false;
 
+  activeEffects: PersistentEffect[] = [];
+
   frameCount = signal<number>(0);
+
+  subs: Subscription = new Subscription();
 
   constructor(
     private environmentService: Environment,
@@ -25,11 +37,77 @@ export class Draw {
         this.resume();
       }
     });
+
+    this.subs.add(
+      this.environmentService.beingDied$.subscribe((being) => {
+        const { position, genes: { size }} = being;
+        const effectSize = size * 5;
+
+        this.startPersistentEffect(2000, (ctx: CanvasRenderingContext2D) => {
+          ctx.strokeStyle = '#FF0000';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(position.x - effectSize / 2, position.y);
+          ctx.lineTo(position.x + effectSize / 2, position.y);
+          ctx.stroke();
+          ctx.closePath();
+        });
+      })
+    );
+
+    this.subs.add(
+      this.environmentService.beingBorn$.subscribe((being) => {
+        const { position, genes: { size }} = being;
+        const effectSize = size * 5;
+
+        const bornAt = Date.now();
+
+        this.startPersistentEffect(2000, (ctx: CanvasRenderingContext2D) => {
+          ctx.strokeStyle = '#00FF00';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(position.x - effectSize / 2, position.y);
+          ctx.lineTo(position.x + effectSize / 2, position.y);
+
+          ctx.moveTo(position.x, position.y - effectSize / 2);
+          ctx.lineTo(position.x, position.y + effectSize / 2);
+          ctx.stroke();
+          ctx.closePath();
+        });
+      })
+    );
   }
 
   initialize(canvas: HTMLCanvasElement, groupColors: Record<string, string>) {
     this.canvas = canvas;
     this.groupColors = groupColors;
+  }
+
+  startPersistentEffect(dueIn: number, drawF: DrawFunction) {
+    const effect: PersistentEffect = {
+      expiresAt: Date.now() + dueIn,
+      drawF: drawF,
+    };
+
+    this.activeEffects.push(effect);
+  }
+
+  drawAndUpdateEffects() {
+    const ctx = this.ctx;
+    const currentTime = Date.now();
+
+    this.activeEffects = this.activeEffects.filter((effect) => {
+      if (currentTime > effect.expiresAt) {
+        return false;
+
+      } else {
+        ctx.save();
+        effect.drawF(ctx);
+        ctx.restore();
+
+        return true;
+      }
+    });
   }
 
   drawBeing(being: Being) {
@@ -43,9 +121,10 @@ export class Draw {
       throw new Error(`Unknown group ${group}`);
     }
 
+    const halfSize = size / 2;
     ctx.strokeStyle = '#000000';
     ctx.fillStyle = color;
-    ctx.fillRect(x, y, size, size);
+    ctx.fillRect(x - halfSize, y - halfSize, size, size);
 
     ctx.restore();
   }
@@ -93,6 +172,8 @@ export class Draw {
       ctx.restore();
     }
 
+    this.drawAndUpdateEffects();
+
     this.lastDrawTimestamp = timestamp;
 
     if (this.isDrawing) {
@@ -111,5 +192,9 @@ export class Draw {
   resume() {
     this.isDrawing = true;
     requestAnimationFrame(this.draw.bind(this));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 }

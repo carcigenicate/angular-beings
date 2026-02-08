@@ -12,11 +12,13 @@ import {
 
 import { Environment } from '../environment';
 import { Draw } from '../draw';
-import { Being, Genes } from '../../models/Being';
+import { Being, fuzzGenes, Genes, Sex } from '../../models/Being';
 import * as randomUtil from '../../util/random';
 import { Button } from 'primeng/button';
 import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
 import { IsInstanceOfPipe } from '../is-instance-of-pipe';
+
+import config from '../../config';
 
 @Component({
   selector: 'app-main-canvas',
@@ -49,9 +51,10 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   startingGenes: Genes = {
     maxHealth: 100,
-    size: 5,
-    speed: 500,
-    strength: 1,
+    size: 10,
+    speed: 250,
+    attack: config.GENE_FUZZ_AMOUNT,
+    defense: config.GENE_FUZZ_AMOUNT,
   }
 
   selectedBeing = signal<Being | null>(null);
@@ -63,27 +66,31 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createNewBeings(100, this.startingGenes, Object.keys(this.groupColors));
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
 
+  // @HostListener('keydown', ['$event'])
+  // onSpaceUp($event: Event) {
+  //   this.togglePause();
+  // }
+
   ngAfterViewInit() {
-    console.log('Draw service initializing')
     this.drawService.initialize(this.canvasRef.nativeElement, this.groupColors);
-    console.log('Draw service initialized')
     this.environmentService.resume();
   }
 
   createNewBeings(count: number, startingGenes: Genes, groups: string[]): Being[] {
     const beings: Being[] = [];
     for (let n = 0; n < count; n++) {
-      const sex = randomUtil.randomInt(0, 1) === 0 ? 'male' : 'female';
+      const sex: Sex = randomUtil.selectRandom(['male', 'female']);
       const group = randomUtil.selectRandom(groups);
       const position = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
       const destination = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
 
-      const being = new Being(startingGenes, sex, group, position);
+      const fuzzedGenes = fuzzGenes(startingGenes, config.GENE_FUZZ_AMOUNT);
+      const being = new Being(fuzzedGenes, sex, group, position);
       being.destination = destination;
 
       beings.push(being);

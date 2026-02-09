@@ -1,3 +1,86 @@
+{{ dialogView() }}
+
+<p-dialog
+  [visible]="dialogView() !== null"
+  (visibleChange)="dialogVisibilityChanged($event)"
+>
+  <ng-template #content>
+    @switch(dialogView()) {
+      @case('examine-beings') {
+        <p-table
+          [value]="environmentService.beings()"
+          dataKey="id"
+          sortField="health"
+          [sortOrder]="-1"
+          selectionMode="single"
+          [selection]="environmentService.selectedBeing()"
+          (selectionChange)="environmentService.selectedBeing.set($event)"
+        >
+          <ng-template #caption>
+            <div class="d-flex justify-content-between">
+              <span>Total: {{ environmentService.beings().length }}</span>
+            </div>
+          </ng-template>
+
+          <ng-template #header>
+            <tr>
+              <th pSortableColumn="id">ID <p-sortIcon field="id"/></th>
+              <th pSortableColumn="group">Group <p-sortIcon field="group"/></th>
+              <th pSortableColumn="health">HP <p-sortIcon field="health"/></th>
+              <th pSortableColumn="genes.attack">ATT <p-sortIcon field="genes.attack"/></th>
+              <th pSortableColumn="genes.defense">DEF <p-sortIcon field="genes.defense"/></th>
+              <th pSortableColumn="genes.size">Size <p-sortIcon field="genes.size"/></th>
+            </tr>
+          </ng-template>
+
+          <ng-template #body let-being>
+            <tr
+              [pSelectableRow]="being"
+              [style.height.px]="examineTableRowHeightPx"
+            >
+              <td>{{ being.id | slice:0:5 }}...</td>
+              <td>
+                <div class="d-flex gap-1 align-items-center">
+                  {{ being.group }}
+                  <div class="group-color" [style.background-color]="groupColors[being.group]"></div>
+                </div>
+
+              </td>
+              <td>
+                <div class="d-flex flex-column">
+                  {{ being.health | number:'1.0-0' }}/{{ being.genes.maxHealth | number:'1.0-0' }}
+                </div>
+
+                <p-progress-bar
+                  color="red"
+                  [value]="(being.health / being.genes.maxHealth) * 100"
+                  [showValue]="false"
+                  [pt]="{ root: { style: { 'height': '2px' } } }"
+                />
+              </td>
+              <td>{{ being.genes.attack  | number:'1.0-0' }}</td>
+              <td>{{ being.genes.defense  | number:'1.0-0' }}</td>
+              <td>{{ being.genes.size  | number:'1.0-0' }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+
+      @case('create-being') {
+        <app-being-editor
+          [(being)]="createNewBeingModel"
+          [groupColors]="groupColors"
+        />
+
+        <p-button
+          label="Create"
+          (onClick)="createBeingFromModel()"
+        />
+      }
+    }
+  </ng-template>
+</p-dialog>
+
 <div
   class="container-fluid"
 >
@@ -21,6 +104,18 @@
         </ng-template>
 
         <ng-template #center>
+          <div class="d-flex gap-1">
+            <p-button
+              label="Examine"
+              (onClick)="dialogView.set('examine-beings')"
+            />
+
+            <p-button
+              label="Add"
+              (onClick)="dialogView.set('create-being')"
+            />
+          </div>
+
         </ng-template>
 
         <ng-template #end>
@@ -44,28 +139,64 @@
   </div>
 
   <div class="row">
-    <div class="stats-panel col-2">
-      @let stats = environmentService.currentStats();
+    <div class="stats-panel col-4">
+      <p-tabs
+        [(value)]="currentPanel"
+      >
+        <p-tablist>
+          <p-tab value="stats">Stats</p-tab>
+          <p-tab value="selection">Selection</p-tab>
+        </p-tablist>
 
-      <div class="d-flex flex-column">
-        <div class="d-flex flex-column gap-1">
-          <span># Targeting Beings: {{ stats?.beingsTargetingBeing?.length }}</span>
-          <span># Targeting Space: {{ stats?.beingsTargetingSpace?.length }}</span>
-          <span>Frame #: {{ drawService.frameCount() }}</span>
-        </div>
+        <p-tabpanels>
+          <p-tabpanel value="stats">
+            @let stats = environmentService.currentStats();
+            <div class="d-flex flex-column">
+              <div class="d-flex flex-column gap-1">
+                <span># Targeting Beings: {{ stats?.beingsTargetingBeing?.length }}</span>
+                <span># Targeting Space: {{ stats?.beingsTargetingSpace?.length }}</span>
+                <span>Frame #: {{ drawService.frameCount() }}</span>
+              </div>
 
-        <div>
-          <div class="d-flex flex-column gap-1">
-            <pre>{{ stats?.groupCount | json }}</pre>
-          </div>
-        </div>
-      </div>
+              <div>
+                <div class="d-flex flex-column gap-1">
+                  <pre>{{ stats?.groupCount | json }}</pre>
+                </div>
+              </div>
+            </div>
 
-      <div>
-        <div class="d-flex flex-column gap-1">
-          <pre>{{ stats?.sexCount | json }}</pre>
-        </div>
-      </div>
+            <div>
+              <div class="d-flex flex-column gap-1">
+                <pre>{{ stats?.sexCount | json }}</pre>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="selection">
+            <p-card [style.min-height.vh]="50">
+              @let being = environmentService.selectedBeing();
+              @if (being) {
+                <div
+                  class="selection-panel d-flex flex-column gap-1"
+                >
+                  <app-being-editor
+                    [(being)]="$any(environmentService.selectedBeing)"
+                    [groupColors]="groupColors"
+                  />
+
+                  <p-divider />
+
+                  <p-button
+                    label="Kill"
+                    severity="danger"
+                    (onClick)="environmentService.killBeings([being])"
+                  />
+                </div>
+              }
+            </p-card>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
     </div>
 
     <div class="col-8">
@@ -81,32 +212,11 @@
 
     </div>
 
-    <div class="col-2">
+    <div class="col-3">
       <div class="d-flex flex-column gap-5 ms-2">
         <div class="d-flex flex-column gap-1">
 
         </div>
-
-
-        @let being = selectedBeing();
-        @if (being) {
-          <div
-            class="selection-panel d-flex flex-column gap-1"
-          >
-            <span>ID: {{ being.id }}</span>
-            <span>Health: {{ being.health }}</span>
-            <span>Position: {{ being.position.x | number:'1.1-1' }}, {{ being.position.y | number:'1.1-1' }}</span>
-            <span>Destination:
-              @if (being.destination | isInstanceOf:Being) {
-                <span>b {{ being.destination.position.x | number:'1.1-1' }}, {{ being.destination.position.y | number:'1.1-1' }}</span>
-              } @else {
-                <span>p {{ being.destination.x | number:'1.1-1' }}, {{ being.destination.y | number:'1.1-1' }}</span>
-              }
-            </span>
-            <span> {{ being.sex }}</span>
-            <span>{{ being.genes | json }}</span>
-          </div>
-        }
       </div>
     </div>
   </div>

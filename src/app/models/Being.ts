@@ -73,10 +73,22 @@ export class Being {
 
   }
 
-  static randomChildWithGenes(genes: Genes, group: string, position: Position): Being {
+  static randomWithGenes(genes: Genes, group: string, position: Position): Being {
     const sex: Sex = randUtil.selectRandom(['male', 'female'])
     return new Being(genes, sex, group, position);
   }
+
+  /**
+   * @deprecated
+   * Very unsafe. Use with caution.
+   */
+  static fromRaw(raw: Pick<Being, 'genes' | 'sex' | 'group' | 'position'>): Being {
+    const instance = new Being(raw.genes, raw.sex, raw.group, raw.position);
+    Object.assign(instance, raw);
+
+    return instance;
+  }
+
 
   getDestinationPosition(): Position {
     if (this.destination instanceof Being) {
@@ -164,7 +176,7 @@ export class Being {
     const baseGenes = this.calculateFitness() > father.calculateFitness() ? this.genes : father.genes;
     const fuzzedGenes = fuzzGenes(baseGenes, config.GENE_FUZZ_AMOUNT);
 
-    const child = Being.randomChildWithGenes(fuzzedGenes, this.group, this.position);
+    const child = Being.randomWithGenes(fuzzedGenes, this.group, this.position);
 
     this.associateAsFamily(child);
     father.associateAsFamily(child);

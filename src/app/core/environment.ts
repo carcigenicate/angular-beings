@@ -89,8 +89,6 @@ export class Environment {
   width: number;
   height: number;
 
-  beings: Being[] = [];
-
   private stats!: EnvironmentStats;
 
   updateTimer?: ReturnType<typeof setInterval>;
@@ -98,6 +96,9 @@ export class Environment {
 
   positionIndex!: PositionIndex;
 
+  beings = signal<Being[]>([]);
+
+  selectedBeing = signal<Being | null>(null);
   isPaused = signal<boolean>(true);
   isDebugMode = signal<boolean>(false);
   currentStats = signal<EnvironmentStats>(this.stats);
@@ -115,9 +116,9 @@ export class Environment {
   initialize(width: number, height: number, beings: Being[]) {
     this.width = width;
     this.height = height;
-    this.beings = beings;
+    this.beings.set(beings);
 
-    this.positionIndex = new PositionIndex(this.beings);
+    this.positionIndex = new PositionIndex(this.beings());
 
     this.startUpdating();
   }
@@ -202,7 +203,10 @@ export class Environment {
 
     if (being.pregnancyIsDue()) {
       const child = being.produceChild();
-      this.beings.push(child);
+      this.beings.update((beings) => {
+        beings.push(child);
+        return beings;
+      });
       this.beingBorn$.next(child);
     }
 
@@ -215,27 +219,34 @@ export class Environment {
 
   removeBeings(beingIds: string[]) {
     const removeBeingSet = new Set<string>(beingIds);
-    this.beings = this.beings.filter((being) => !removeBeingSet.has(being.id));
+    this.beings.update((beings) => {
+      beings = beings.filter((being) => !removeBeingSet.has(being.id));
+      return beings;
+    });
   }
 
   update(updatePercentage: number) {
-    if (this.beings.length === 0) {
+    if (this.beings().length === 0) {
       // TODO: Handle better
       return;
     }
 
+    if (this.beings().length > 2_000) {
+        this.bombArea({ x: this.width / 2, y: this.height / 2 }, this.width / 2, 1000)
+    }
+
     this.resetStats();
 
-    this.positionIndex = new PositionIndex(this.beings);
+    this.positionIndex = new PositionIndex(this.beings());
 
     const beingsToRemove: string[] = []
-    for (const being of this.beings) {
+    for (const being of this.beings()) {
       this.updateBeing(being, updatePercentage);
       this.recordBeingStats(being);
 
       if (being.isDead()) {
         beingsToRemove.push(being.id);
-        this.beingDied$.next(being);
+        this.markAsDead(being);
       }
     }
 
@@ -244,8 +255,36 @@ export class Environment {
     this.currentStats.set(this.stats);
   }
 
+  markAsDead(being: Being) {
+    this.beingDied$.next(being);
+    if (this.selectedBeing()?.id === being.id) {
+      this.selectedBeing.set(null);
+    }
+  }
+
+  killBeings(beings: Being[]) {
+    const idsToRemove = [];
+    for (const being of beings) {
+      this.markAsDead(being);
+      idsToRemove.push(being.id);
+    }
+    this.removeBeings(idsToRemove);
+  }
+
   getBeingAt(x: number, y: number): Being | null {
     return this.positionIndex.findClosestTo({ x: x, y: y}, 50);
+  }
+
+  selectBeingAt(x: number, y: number) {
+    const being = this.getBeingAt(x, y);
+    this.selectedBeing.set(being);
+  }
+
+  addBeing(being: Being) {
+    this.beings.update((beings) => {
+      beings.push(being);
+      return beings;
+    })
   }
 
   bombArea(position: Position, diameter: number, damage: number) {

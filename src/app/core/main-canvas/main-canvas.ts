@@ -15,13 +15,26 @@ import { Draw } from '../draw';
 import { Being, fuzzGenes, Genes, Sex } from '../../models/Being';
 import * as randomUtil from '../../util/random';
 import { Button } from 'primeng/button';
-import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe } from '@angular/common';
+import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe, KeyValuePipe, SlicePipe } from '@angular/common';
+
+import _ from 'lodash';
+import { v4 as uuid } from 'uuid';
 
 import config from '../../config';
 import { Toolbar } from 'primeng/toolbar';
 import { IsInstanceOfPipe } from '../is-instance-of-pipe';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { ProgressBar } from 'primeng/progressbar';
+import { Card } from 'primeng/card';
+import { Divider } from 'primeng/divider';
+import { InputNumber } from 'primeng/inputnumber';
+import { FormsModule } from '@angular/forms';
+import { BeingEditor } from '../being-editor/being-editor';
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 
 type MouseMode = 'select' | 'bomb';
+type DialogView = null | 'examine-beings' | 'create-being';
 
 @Pipe({
   name: 'modeCursor',
@@ -41,12 +54,23 @@ export class EnvironmentCursorPipe implements PipeTransform {
   selector: 'app-main-canvas',
   imports: [
     Button,
-    AsyncPipe,
     JsonPipe,
     DecimalPipe,
     EnvironmentCursorPipe,
-    IsInstanceOfPipe,
-    Toolbar
+    Toolbar,
+    Dialog,
+    TableModule,
+    SlicePipe,
+    ProgressBar,
+    Card,
+    Divider,
+    FormsModule,
+    BeingEditor,
+    Tab,
+    Tabs,
+    TabPanel,
+    TabPanels,
+    TabList
   ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',
@@ -75,9 +99,15 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     defense: config.GENE_FUZZ_AMOUNT,
   }
 
-  selectedBeing = signal<Being | null>(null);
+  examineTableRowHeightPx: number = 50;
 
   mouseMode = signal<MouseMode>('select');
+
+  dialogView = signal<DialogView>(null);
+
+  createNewBeingModel!: Being;
+
+  currentPanel: string | number = 'stats';  // TODO: Fix
 
   constructor(
     public environmentService: Environment,
@@ -86,7 +116,14 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(100, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
+
+    this.createNewBeingModel = new Being(
+      this.startingGenes,
+      'male',
+      Object.keys(this.groupColors)[0],
+      { x: this.gameWidth() / 2, y: this.gameHeight() / 2 }
+    );
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
@@ -132,7 +169,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     const y = $event.clientY - bounds.top;
 
     if (this.mouseMode() === 'select') {
-      this.selectBeingAt(x, y);
+      this.environmentService.selectBeingAt(x, y);
     } else {
       this.bombAreaAt(x, y);
     }
@@ -142,9 +179,18 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     this.environmentService.bombArea({ x: x, y: y }, 500, 1000);
   }
 
-  selectBeingAt(x: number, y: number) {
-    const being = this.environmentService.getBeingAt(x, y);
-    this.selectedBeing.set(being);
+  dialogVisibilityChanged(newVisibility: boolean) {
+    if (!newVisibility) {
+      this.dialogView.set(null);
+    }
+  }
+
+  createBeingFromModel() {
+    const beingCopy = _.cloneDeep(this.createNewBeingModel);
+    const newBeing = Being.fromRaw(beingCopy);
+    this.createNewBeingModel.id = uuid();
+
+    this.environmentService.addBeing(newBeing);
   }
 
   ngOnDestroy(): void {

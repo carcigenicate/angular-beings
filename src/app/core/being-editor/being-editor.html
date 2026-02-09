@@ -1,0 +1,89 @@
+<div
+  class="d-flex flex-column gap-3"
+>
+  @let being = beingModel();
+
+  <div class="field-pair">
+    <label>ID</label>
+    <input pInputText [(ngModel)]="being.id">
+  </div>
+
+  <div class="field-pair">
+    <label>Group</label>
+    <div class="d-flex align-items-center gap-1">
+      @let groupColor = groupColors()[being.group];
+      @if (groupColor) {
+        <div
+          class="group-color"
+          [style.background-color]="groupColor"
+        ></div>
+      }
+
+      <p-select
+        [(ngModel)]="being.group"
+        [options]="groupOptions()"
+      />
+    </div>
+
+  </div>
+
+  <div class="field-pair">
+    <label>Health</label>
+
+    <div class="d-flex flex-column">
+      <p-progress-bar
+        color="red"
+        [value]="(being.health / being.genes.maxHealth) * 100"
+        [showValue]="false"
+        [pt]="{ root: { style: { 'height': '5px' } } }"
+      />
+
+      <p-inputNumber [(ngModel)]="being.health" />
+    </div>
+
+  </div>
+
+  <div class="field-pair">
+    <label>Position</label>
+
+    <div class="d-flex flex-column">
+      <span>X: <p-inputNumber [(ngModel)]=" being.position.x" /></span>
+      <span>Y: <p-inputNumber [(ngModel)]=" being.position.y" /></span>
+    </div>
+  </div>
+
+  <span>Destination:
+    @if (being.destination | isInstanceOf:Being) {
+      <span>b {{ being.destination.position.x | number:'1.0-0' }}, {{ being.destination.position.y | number:'1.0-0' }}</span>
+    } @else {
+      <span>p {{ being.destination.x | number:'1.0-0' }}, {{ being.destination.y | number:'1.0-0' }}</span>
+    }
+  </span>
+
+
+  <div class="field-pair">
+    <label>Sex</label>
+
+    <p-select
+      [options]="sexOptions"
+      [(ngModel)]="being.sex"
+    />
+  </div>
+
+  <span>
+    <table>
+      <tbody>
+        @for (geneEntry of being.genes | keyvalue; track geneEntry.key) {
+          <tr>
+            <td>{{ geneEntry.key }}</td>
+            <td>
+              <p-inputNumber
+                [(ngModel)]="$any(being.genes)[geneEntry.key]"
+              />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </span>
+</div>

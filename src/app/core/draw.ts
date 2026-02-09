@@ -142,11 +142,17 @@ export class Draw implements OnDestroy {
     ctx.fillStyle = color;
     ctx.fillRect(x - halfSize, y - halfSize, size, size);
 
+    if (this.environmentService.selectedBeing()?.id == being.id) {
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 5;
+      ctx.strokeRect(x - halfSize, y - halfSize, size, size);
+    }
+
     ctx.restore();
   }
 
   draw(timestamp: number) {
-    const beings = this.environmentService.beings;
+    const beings = this.environmentService.beings();
 
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -168,16 +174,6 @@ export class Draw implements OnDestroy {
         ctx.stroke();
         ctx.closePath();
         ctx.restore();
-
-        const colliding = this.environmentService.positionIndex.findColliding(being);
-        for (const collidingBeing of colliding) {
-          ctx.save();
-
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillText('COLLIDING!', collidingBeing.position.x, collidingBeing.position.y);
-
-          ctx.restore();
-        }
       }
 
       ctx.save();

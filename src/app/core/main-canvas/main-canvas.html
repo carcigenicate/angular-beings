@@ -1,5 +1,3 @@
-{{ dialogView() }}
-
 <p-dialog
   [visible]="dialogView() !== null"
   (visibleChange)="dialogVisibilityChanged($event)"
@@ -179,10 +177,15 @@
                 <div
                   class="selection-panel d-flex flex-column gap-1"
                 >
-                  <app-being-editor
-                    [(being)]="$any(environmentService.selectedBeing)"
-                    [groupColors]="groupColors"
-                  />
+                  <div
+                    [style.max-height.vh]="65"
+                    [style.overflow-y]="'auto'"
+                  >
+                    <app-being-editor
+                      [(being)]="$any(environmentService.selectedBeing)"
+                      [groupColors]="groupColors"
+                    />
+                  </div>
 
                   <p-divider />
 

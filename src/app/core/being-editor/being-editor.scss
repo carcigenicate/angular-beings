@@ -4,3 +4,14 @@
 
   row-gap: 0.1rem;
 }
+
+.health-bar {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+:host ::ng-deep .health-input input {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+

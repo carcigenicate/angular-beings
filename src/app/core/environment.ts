@@ -277,7 +277,10 @@ export class Environment {
 
   selectBeingAt(x: number, y: number) {
     const being = this.getBeingAt(x, y);
-    this.selectedBeing.set(being);
+
+    if (being) {
+      this.selectedBeing.set(being);
+    }
   }
 
   addBeing(being: Being) {

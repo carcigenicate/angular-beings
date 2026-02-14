@@ -5,7 +5,18 @@
 
   <div class="field-pair">
     <label>ID</label>
-    <input pInputText [(ngModel)]="being.id">
+
+    <p-inputgroup>
+      <input pInputText [(ngModel)]="being.id">
+
+      <p-inputgroup-addon>
+        <p-button
+          label="Random"
+          (onClick)="randomizeId()"
+        />
+      </p-inputgroup-addon>
+    </p-inputgroup>
+
   </div>
 
   <div class="field-pair">
@@ -36,9 +47,13 @@
         [value]="(being.health / being.genes.maxHealth) * 100"
         [showValue]="false"
         [pt]="{ root: { style: { 'height': '5px' } } }"
+        class="health-bar"
       />
 
-      <p-inputNumber [(ngModel)]="being.health" />
+      <p-inputNumber
+        [(ngModel)]="being.health"
+        class="health-input"
+      />
     </div>
 
   </div>
@@ -47,8 +62,20 @@
     <label>Position</label>
 
     <div class="d-flex flex-column">
-      <span>X: <p-inputNumber [(ngModel)]=" being.position.x" /></span>
-      <span>Y: <p-inputNumber [(ngModel)]=" being.position.y" /></span>
+      <div class="d-flex gap-1 align-items-center">
+        <div class="d-flex flex-column gap-1">
+          <span>X: <p-inputNumber [(ngModel)]=" being.position.x" /></span>
+          <span>Y: <p-inputNumber [(ngModel)]=" being.position.y" /></span>
+        </div>
+
+        @if (canvas()) {
+          <p-button
+            label="Select"
+            (onClick)="setPositionFromCanvas()"
+          />
+        }
+      </div>
+
     </div>
   </div>
 

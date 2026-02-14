@@ -142,9 +142,13 @@ export class Draw implements OnDestroy {
     ctx.fillStyle = color;
     ctx.fillRect(x - halfSize, y - halfSize, size, size);
 
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - halfSize, y - halfSize, size, size);
+
     if (this.environmentService.selectedBeing()?.id == being.id) {
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 1;
       ctx.strokeRect(x - halfSize, y - halfSize, size, size);
     }
 

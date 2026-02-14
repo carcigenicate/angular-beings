@@ -68,6 +68,7 @@
         <app-being-editor
           [(being)]="createNewBeingModel"
           [groupColors]="groupColors"
+          [canvas]="canvasRef.nativeElement"
         />
 
         <p-button
@@ -184,6 +185,7 @@
                     <app-being-editor
                       [(being)]="$any(environmentService.selectedBeing)"
                       [groupColors]="groupColors"
+                      [canvas]="canvasRef.nativeElement"
                     />
                   </div>
 

@@ -14,6 +14,7 @@ import { Environment } from '../environment';
 import { Draw } from '../draw';
 import { Being, fuzzGenes, Genes, Sex } from '../../models/Being';
 import * as randomUtil from '../../util/random';
+import * as elementUtil from '../../util/element';
 import { Button } from 'primeng/button';
 import { AsyncPipe, DatePipe, DecimalPipe, JsonPipe, KeyValuePipe, SlicePipe } from '@angular/common';
 
@@ -164,9 +165,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onCanvasClick($event: MouseEvent) {
-    const bounds = this.canvasRef.nativeElement.getBoundingClientRect();
-    const x = $event.clientX - bounds.left;
-    const y = $event.clientY - bounds.top;
+    const { x, y } = elementUtil.getClickPosition(this.canvasRef.nativeElement, $event);
 
     if (this.mouseMode() === 'select') {
       this.environmentService.selectBeingAt(x, y);

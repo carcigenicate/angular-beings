@@ -275,12 +275,14 @@ export class Environment {
     return this.positionIndex.findClosestTo({ x: x, y: y}, 50);
   }
 
-  selectBeingAt(x: number, y: number) {
+  selectBeingAt(x: number, y: number): Being | null {
     const being = this.getBeingAt(x, y);
 
     if (being) {
       this.selectedBeing.set(being);
     }
+
+    return being;
   }
 
   addBeing(being: Being) {

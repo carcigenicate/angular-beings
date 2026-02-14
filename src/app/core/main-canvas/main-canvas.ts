@@ -108,7 +108,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   createNewBeingModel!: Being;
 
-  currentPanel: string | number = 'stats';  // TODO: Fix
+  currentPanel: 'stats' | 'selected-being' | 'add-being' = 'stats';
 
   constructor(
     public environmentService: Environment,
@@ -168,10 +168,18 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     const { x, y } = elementUtil.getClickPosition(this.canvasRef.nativeElement, $event);
 
     if (this.mouseMode() === 'select') {
-      this.environmentService.selectBeingAt(x, y);
+      this.selectBeingAt(x, y);
     } else {
       this.bombAreaAt(x, y);
     }
+  }
+
+  selectBeingAt(x: number, y: number) {
+    const selectedBeing = this.environmentService.selectBeingAt(x, y);
+    if (selectedBeing) {
+      this.currentPanel = 'selected-being';
+    }
+
   }
 
   bombAreaAt(x: number, y: number) {

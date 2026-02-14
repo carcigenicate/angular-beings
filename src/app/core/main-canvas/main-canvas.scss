@@ -8,7 +8,7 @@ canvas {
 
 }
 
-.selection-panel {
+.selection-panel, .add-panel {
   font-size: 0.9rem;
 }
 
@@ -18,4 +18,9 @@ canvas {
 
 .selected-tool {
   filter: brightness(75%);
+}
+
+.scroll-wrapper {
+  max-height: 65vh;
+  overflow-y: scroll;
 }

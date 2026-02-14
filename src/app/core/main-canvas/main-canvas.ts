@@ -12,7 +12,14 @@ import {
 
 import { Environment } from '../environment';
 import { Draw } from '../draw';
-import { Being, fuzzGenes, Genes, Sex } from '../../models/Being';
+import {
+  BehaviorsConstructors,
+  Being,
+  DestinationBehaviorConstructor,
+  fuzzGenes,
+  Genes,
+  Sex
+} from '../../models/Being';
 import * as randomUtil from '../../util/random';
 import * as elementUtil from '../../util/element';
 import { Button } from 'primeng/button';
@@ -33,6 +40,7 @@ import { InputNumber } from 'primeng/inputnumber';
 import { FormsModule } from '@angular/forms';
 import { BeingEditor } from '../being-editor/being-editor';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
+import { DestinationBehavior, LimitedMemoryChaseEnemy } from '../behaviors/destination';
 
 type MouseMode = 'select' | 'bomb';
 type DialogView = null | 'examine-beings' | 'create-being';
@@ -41,15 +49,17 @@ type DialogView = null | 'examine-beings' | 'create-being';
   name: 'modeCursor',
 })
 export class EnvironmentCursorPipe implements PipeTransform {
-
   transform(mode: MouseMode){
     switch(mode) {
       case 'select': return 'default';
       case 'bomb': return 'all-scroll';
     }
   }
-
 }
+
+const destinationBehaviors: DestinationBehaviorConstructor[] = [
+  (being: Being) => new LimitedMemoryChaseEnemy(being, config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME),
+]
 
 @Component({
   selector: 'app-main-canvas',
@@ -63,7 +73,6 @@ export class EnvironmentCursorPipe implements PipeTransform {
     TableModule,
     SlicePipe,
     ProgressBar,
-    Card,
     Divider,
     FormsModule,
     BeingEditor,
@@ -119,12 +128,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
 
-    this.createNewBeingModel = new Being(
-      this.startingGenes,
-      'male',
-      Object.keys(this.groupColors)[0],
-      { x: this.gameWidth() / 2, y: this.gameHeight() / 2 }
-    );
+    this.createNewBeingModel = beings[0];
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
@@ -143,7 +147,10 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
       const destination = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
 
       const fuzzedGenes = fuzzGenes(startingGenes, config.GENE_FUZZ_AMOUNT);
-      const being = new Being(fuzzedGenes, sex, group, position);
+      const behaviorsConstructors: BehaviorsConstructors = {
+        destination: randomUtil.selectRandom(destinationBehaviors),
+      }
+      const being = new Being(fuzzedGenes, behaviorsConstructors, sex, group, position);
       being.destination = destination;
 
       beings.push(being);

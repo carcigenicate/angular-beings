@@ -1,7 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
 import _ from 'lodash';
-import Fatbrush from 'flatbush';
 
 import { Being, Genes, Sex } from '../models/Being';
 import * as randomUtil from '../util/random';
@@ -10,72 +9,8 @@ import { Position } from '../models/Misc';
 
 import config from '../config';
 import { BehaviorSubject, Subject } from 'rxjs';
-
-class PositionIndex {
-  private indexLookup: Record<string, Being>;
-  private index: Fatbrush;
-
-  constructor(beings: Being[]) {
-    this.index = new Fatbrush(beings.length);
-    this.indexLookup = {};
-
-    for (const being of beings) {
-      const halfSize = being.genes.size / 2;
-      const { x, y } = being.position;
-
-      const i = this.index.add(x - halfSize,  y - halfSize, x + halfSize, y + halfSize);
-      this.indexLookup[i] = being;
-    }
-
-    this.index.finish();
-  }
-
-  findColliding(being: Being) {
-    const halfSize = being.genes.size / 2;
-    const { x, y } = being.position;
-
-    const found = this.index.search(x - halfSize,  y - halfSize, x + halfSize, y + halfSize, (neighborI) => {
-      const neighborBeing = this.indexLookup[neighborI];
-      return neighborBeing !== being;
-    });
-
-    return found.map((i) => this.indexLookup[i]);
-  }
-
-  findWithin(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)): Being[] {
-    const { x, y } = position;
-
-    const foundWithin = this.index.search(x - radii, y - radii, x + radii, y + radii, (i) => {
-      const being = this.indexLookup[i];
-      return predicate(being);
-    });
-
-    return foundWithin.map((i) => this.indexLookup[i])
-  }
-
-  findClosestTo(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)): Being | null {
-    const foundWithinBeings = this.findWithin(position, radii, predicate);
-
-    let minDist = Infinity;
-    let closestBeing: Being | null = null;
-    for (const neighborBeing of foundWithinBeings) {
-      const dist = mathUtil.distanceTo(position, neighborBeing.position);
-      if (closestBeing === null || dist < minDist) {
-        closestBeing = neighborBeing;
-        minDist = dist;
-      }
-    }
-
-    return closestBeing;
-  }
-
-  getRandomNear(position: Position, radii: number, predicate: (being: Being) => boolean = (() => true)) {
-    const foundWithinBeings = this.findWithin(position, radii, predicate);
-
-    return randomUtil.selectRandom(foundWithinBeings);
-  }
-
-}
+import { PositionIndex } from './PositionIndex';
+import { DestinationBehaviorContext } from './behaviors/destination';
 
 export interface EnvironmentStats {
   beingsTargetingSpace: Being[];
@@ -170,36 +105,17 @@ export class Environment {
     return xIsOob || yIsOob;
   }
 
-  assignNewDestination(being: Being) {
-    const closestNonAlly = this.positionIndex.getRandomNear(being.position, Math.max(this.width, this.height) / 4, (neighbor) => {
-      return neighbor.group !== being.group && being !== neighbor;
-    });
-
-    if (closestNonAlly) {
-      being.assignNewTemporaryTargetBeing(closestNonAlly, randomUtil.randomInt(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME));
-    } else {
-      being.destination = randomUtil.randomPosition(this.width, this.height);
-    }
-  }
-
-  updateDestination(being: Being) {
-    const currentTime = Date.now();
-    if (being.forceRandomPositionAt && currentTime >= being.forceRandomPositionAt) {
-      being.destination = randomUtil.randomPosition(this.width, this.height);
-      delete being.forceRandomPositionAt;
-    } else {
-      if (mathUtil.distanceTo(being.position, being.getDestinationPosition()) <= 1) {
-        this.assignNewDestination(being);
-      }
-    }
-  }
-
   updateBeing(being: Being, updatePercentage: number) {
     const currentTime = Date.now();
 
     being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
 
-    this.updateDestination(being);
+    const ctx: DestinationBehaviorContext = {
+      allBeings: this.beings(),
+      positionIndex: this.positionIndex,
+      world: { width: this.width, height: this.height },
+    };
+    being.updateDestination(ctx);
 
     if (being.pregnancyIsDue()) {
       const child = being.produceChild();

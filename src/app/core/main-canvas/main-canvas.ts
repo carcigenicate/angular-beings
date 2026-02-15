@@ -130,7 +130,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createNewBeings(250, this.startingGenes, Object.keys(this.groupColors));
 
     this.createNewBeingModel = Being.fromRaw(beings[0]);
 

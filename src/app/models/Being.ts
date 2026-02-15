@@ -136,6 +136,10 @@ export class Being {
     this.health = Math.max(0, this.health - damage);
   }
 
+  age(): number {
+    return Date.now() - this.bornAt;
+  }
+
   impregnate(mother: Being, pregnancyDuration: number) {
     if (!mother.pregnancy) {
       mother.pregnancy = {

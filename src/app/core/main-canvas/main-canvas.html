@@ -144,6 +144,8 @@
                 class="selection-panel d-flex flex-column gap-1"
               >
                 <div class="scroll-wrapper">
+                  <span>Alive For {{ being.age() | formattedAge }}</span>
+                  <p-divider />
                   <app-being-editor
                     [(being)]="$any(environmentService.selectedBeing)"
                     [groupColors]="groupColors"

@@ -41,6 +41,7 @@ import { BeingEditor } from '../being-editor/being-editor';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { DestinationBehavior, LimitedMemoryChaseEnemy } from '../behaviors/destination';
 import { OverviewTable } from '../overview-table/overview-table';
+import { AgePipe } from '../../pipes/age';
 
 type MouseMode = 'select' | 'bomb';
 type DialogView = null | 'examine-beings' | 'create-being';
@@ -82,7 +83,8 @@ const destinationBehaviors: DestinationBehavior[] = [
     TabPanels,
     TabList,
     OverviewTable,
-    KeyValuePipe
+    KeyValuePipe,
+    AgePipe
   ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',

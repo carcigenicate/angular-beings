@@ -1,0 +1,63 @@
+<p-table
+  [value]="beings()"
+  dataKey="id"
+  sortField="health"
+  [sortOrder]="-1"
+  selectionMode="single"
+  [selection]="selectedBeing()"
+  (selectionChange)="selectedBeing.set($event)"
+  [virtualScroll]="true"
+  [virtualScrollOptions]="{
+    scrollHeight: '55vh',
+    scrollWidth: '50vh',
+    itemSize: examineTableRowHeightPx,
+  }"
+>
+  <ng-template #caption>
+    <div class="d-flex justify-content-between">
+      <span>Total: {{ beings().length }}</span>
+    </div>
+  </ng-template>
+
+  <ng-template #header>
+    <tr>
+      <th pSortableColumn="id">ID <p-sortIcon field="id"/></th>
+      <th pSortableColumn="group">Group <p-sortIcon field="group"/></th>
+      <th pSortableColumn="health">HP <p-sortIcon field="health"/></th>
+      <th pSortableColumn="genes.attack">ATT <p-sortIcon field="genes.attack"/></th>
+      <th pSortableColumn="genes.defense">DEF <p-sortIcon field="genes.defense"/></th>
+      <th pSortableColumn="genes.size">Size <p-sortIcon field="genes.size"/></th>
+    </tr>
+  </ng-template>
+
+  <ng-template #body let-being>
+    <tr
+      [pSelectableRow]="being"
+      [style.height.px]="examineTableRowHeightPx"
+    >
+      <td>{{ being.id | slice:0:5 }}...</td>
+      <td>
+        <div class="d-flex gap-1 align-items-center">
+          <div class="group-color" [style.background-color]="groupColors[being.group]"></div>
+          {{ being.group }}
+        </div>
+
+      </td>
+      <td>
+        <div class="d-flex flex-column">
+          {{ being.health | number:'1.0-0' }}/{{ being.genes.maxHealth | number:'1.0-0' }}
+        </div>
+
+        <p-progress-bar
+          color="red"
+          [value]="(being.health / being.genes.maxHealth) * 100"
+          [showValue]="false"
+          [pt]="{ root: { style: { 'height': '2px' } } }"
+        />
+      </td>
+      <td>{{ being.genes.attack  | number:'1.0-0' }}</td>
+      <td>{{ being.genes.defense  | number:'1.0-0' }}</td>
+      <td>{{ being.genes.size  | number:'1.0-0' }}</td>
+    </tr>
+  </ng-template>
+</p-table>

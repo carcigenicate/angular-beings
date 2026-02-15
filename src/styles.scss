@@ -1,1 +1,13 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+
+}
+
+body {
+  background-color: var(--p-content-background) !important;
+}
+
+.group-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}

@@ -14,13 +14,7 @@ export interface DestinationBehaviorContext {
 }
 
 export abstract class DestinationBehavior {
-  being: Being;
-
-  constructor(hostBeing: Being) {
-    this.being = hostBeing;
-  }
-
-  abstract updateDestination(ctx: DestinationBehaviorContext): void;
+  abstract updateDestination(being: Being, ctx: DestinationBehaviorContext): void;
 }
 
 export class LimitedMemoryChaseEnemy extends DestinationBehavior {
@@ -28,45 +22,45 @@ export class LimitedMemoryChaseEnemy extends DestinationBehavior {
   minFollowTime: number;
   maxFollowTime: number;
 
-  constructor(being: Being, minFollowTime: number, maxFollowTime: number) {
-    super(being);
+  constructor(minFollowTime: number, maxFollowTime: number) {
+    super();
     this.minFollowTime = minFollowTime;
     this.maxFollowTime = maxFollowTime;
   }
 
-  assignNewTemporaryTargetBeing(newTarget: Being, targetFor: number = 2000) {
-    this.being.destination = newTarget;
+  assignNewTemporaryTargetBeing(being: Being, newTarget: Being, targetFor: number = 2000) {
+    being.destination = newTarget;
 
     if (!this.forceRandomPositionAt) {
       this.forceRandomPositionAt = Date.now() + targetFor;
     }
   }
 
-  private assignNewDestination(ctx: DestinationBehaviorContext) {
+  private assignNewDestination(being: Being, ctx: DestinationBehaviorContext) {
     const { positionIndex, world: { width, height }} = ctx;
 
-    const closestNonAlly = ctx.positionIndex.getRandomNear(this.being.position, Math.max(width, height) / 4, (neighbor) => {
-      return neighbor.group !== this.being.group && this.being.id !== neighbor.id;
+    const closestNonAlly = ctx.positionIndex.getRandomNear(being.position, Math.max(width, height) / 4, (neighbor) => {
+      return neighbor.group !== being.group && being.id !== neighbor.id;
     });
 
     if (closestNonAlly) {
-      this.assignNewTemporaryTargetBeing(closestNonAlly, randomUtil.randomInt(this.minFollowTime, this.maxFollowTime));
+      this.assignNewTemporaryTargetBeing(being, closestNonAlly, randomUtil.randomInt(this.minFollowTime, this.maxFollowTime));
     } else {
-      this.being.destination = randomUtil.randomPosition(width, height);
+      being.destination = randomUtil.randomPosition(width, height);
     }
   }
 
-  override updateDestination(ctx: DestinationBehaviorContext): void {
+  override updateDestination(being: Being, ctx: DestinationBehaviorContext): void {
     const { world: { width, height } } = ctx;
 
     const currentTime = Date.now();
 
     if (this.forceRandomPositionAt && currentTime >= this.forceRandomPositionAt) {
-      this.being.destination = randomUtil.randomPosition(width, height);
+      being.destination = randomUtil.randomPosition(width, height);
       this.forceRandomPositionAt = null;
     } else {
-      if (mathUtil.distanceTo(this.being.position, this.being.getDestinationPosition()) <= 1) {
-        this.assignNewDestination(ctx);
+      if (mathUtil.distanceTo(being.position, being.getDestinationPosition()) <= 1) {
+        this.assignNewDestination(being, ctx);
       }
     }
   }

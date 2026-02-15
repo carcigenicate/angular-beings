@@ -23,9 +23,6 @@ export interface Behaviors {
   destination: DestinationBehavior;
 }
 
-export type DestinationBehaviorConstructor = (being: Being) => DestinationBehavior;
-export type BehaviorsConstructors = Record<keyof Behaviors, DestinationBehaviorConstructor>;
-
 export type Sex = 'male' | 'female';
 
 interface BeingStats {
@@ -44,14 +41,6 @@ export function fuzzGenes(genes: Genes, fuzzBy: number) {
   return genesCopy;
 }
 
-function createBehaviors(being: Being, behaviorConstructors: BehaviorsConstructors): Behaviors {
-  const behaviors: Partial<Behaviors> = {};
-  for (const [behaviorKey, behaviorConstructor] of Object.entries(behaviorConstructors)) {
-    behaviors[behaviorKey as keyof Behaviors] = behaviorConstructor(being);
-  }
-  return behaviors as Behaviors;
-}
-
 export class Being {
   id: string = uuid();
 
@@ -65,7 +54,6 @@ export class Being {
     dueAt: number;
   };
 
-  behaviorConstructors: BehaviorsConstructors;
   behaviors: Behaviors;
 
   familyIds: Set<string> = new Set<string>();
@@ -80,19 +68,20 @@ export class Being {
 
   bornAt: number = Date.now();
 
-  constructor(genes: Genes, behaviorConstructors: BehaviorsConstructors, sex: Sex, group: string, startingPosition: Position) {
+  constructor(genes: Genes, behaviors: Behaviors, sex: Sex, group: string, startingPosition: Position) {
     this.genes = _.cloneDeep(genes);
+    this.behaviors = _.cloneDeep(behaviors);
+
     this.health = genes.maxHealth;
     this.sex = sex;
     this.group = group;
     this.position = _.cloneDeep(startingPosition);
     this.destination = _.cloneDeep(startingPosition);
 
-    this.behaviorConstructors = behaviorConstructors
-    this.behaviors = createBehaviors(this, behaviorConstructors);
+
   }
 
-  static randomWithGenes(genes: Genes, behaviors: BehaviorsConstructors, group: string, position: Position): Being {
+  static randomWithGenes(genes: Genes, behaviors: Behaviors, group: string, position: Position): Being {
     const sex: Sex = randUtil.selectRandom(['male', 'female'])
     return new Being(genes, behaviors, sex, group, position);
   }
@@ -101,8 +90,8 @@ export class Being {
    * @deprecated
    * Very unsafe. Use with caution.
    */
-  static fromRaw(raw: Pick<Being, 'genes' | 'behaviorConstructors' | 'sex' | 'group' | 'position'>): Being {
-    const instance = new Being(raw.genes, raw.behaviorConstructors, raw.sex, raw.group, raw.position);
+  static fromRaw(raw: Pick<Being, 'genes' | 'behaviors' | 'sex' | 'group' | 'position'>): Being {
+    const instance = new Being(raw.genes, raw.behaviors, raw.sex, raw.group, raw.position);
     Object.assign(instance, raw);
 
     return instance;
@@ -165,7 +154,7 @@ export class Being {
   }
 
   updateDestination(ctx: DestinationBehaviorContext): void {
-    this.behaviors.destination.updateDestination(ctx);
+    this.behaviors.destination.updateDestination(this, ctx);
   }
 
   associateAsFamily(being: Being) {
@@ -191,11 +180,11 @@ export class Being {
     const baseGenes = this.calculateFitness() > father.calculateFitness() ? this.genes : father.genes;
     const fuzzedGenes = fuzzGenes(baseGenes, config.GENE_FUZZ_AMOUNT);
 
-    const behaviorConstructors: BehaviorsConstructors = {
-      destination: randUtil.selectRandom([this.behaviorConstructors.destination, father.behaviorConstructors.destination]),
+    const behaviors: Behaviors = {
+      destination: randUtil.selectRandom([this.behaviors.destination, father.behaviors.destination]),
     }
 
-    const child = Being.randomWithGenes(fuzzedGenes, behaviorConstructors, this.group, this.position);
+    const child = Being.randomWithGenes(fuzzedGenes, behaviors, this.group, this.position);
 
     this.associateAsFamily(child);
     father.associateAsFamily(child);

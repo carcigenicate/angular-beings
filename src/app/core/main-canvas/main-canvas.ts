@@ -13,9 +13,8 @@ import {
 import { Environment } from '../environment';
 import { Draw } from '../draw';
 import {
-  BehaviorsConstructors,
+  Behaviors,
   Being,
-  DestinationBehaviorConstructor,
   fuzzGenes,
   Genes,
   Sex
@@ -41,6 +40,7 @@ import { FormsModule } from '@angular/forms';
 import { BeingEditor } from '../being-editor/being-editor';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { DestinationBehavior, LimitedMemoryChaseEnemy } from '../behaviors/destination';
+import { OverviewTable } from '../overview-table/overview-table';
 
 type MouseMode = 'select' | 'bomb';
 type DialogView = null | 'examine-beings' | 'create-being';
@@ -57,9 +57,9 @@ export class EnvironmentCursorPipe implements PipeTransform {
   }
 }
 
-const destinationBehaviors: DestinationBehaviorConstructor[] = [
-  (being: Being) => new LimitedMemoryChaseEnemy(being, config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME),
-]
+const destinationBehaviors: DestinationBehavior[] = [
+  new LimitedMemoryChaseEnemy(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME),
+];
 
 @Component({
   selector: 'app-main-canvas',
@@ -80,7 +80,9 @@ const destinationBehaviors: DestinationBehaviorConstructor[] = [
     Tabs,
     TabPanel,
     TabPanels,
-    TabList
+    TabList,
+    OverviewTable,
+    KeyValuePipe
   ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',
@@ -96,9 +98,11 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
 
   groupColors: Record<string, string> = {
-    Red: '#FF0000',
-    Green: '#00FF00',
-    Blue: '#0000FF',
+    Red: 'red',
+    Green: 'green',
+    Blue: 'blue',
+    Pink: 'pink',
+    Orange: 'orange',
   };
 
   startingGenes: Genes = {
@@ -109,15 +113,13 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     defense: config.GENE_FUZZ_AMOUNT,
   }
 
-  examineTableRowHeightPx: number = 50;
-
   mouseMode = signal<MouseMode>('select');
 
   dialogView = signal<DialogView>(null);
 
   createNewBeingModel!: Being;
 
-  currentPanel: 'stats' | 'selected-being' | 'add-being' = 'stats';
+  currentPanel: 'overview' | 'selected-being' | 'add-being' = 'overview';
 
   constructor(
     public environmentService: Environment,
@@ -128,7 +130,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     const beings = this.createNewBeings(1000, this.startingGenes, Object.keys(this.groupColors));
 
-    this.createNewBeingModel = beings[0];
+    this.createNewBeingModel = Being.fromRaw(beings[0]);
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
   }
@@ -147,10 +149,10 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
       const destination = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
 
       const fuzzedGenes = fuzzGenes(startingGenes, config.GENE_FUZZ_AMOUNT);
-      const behaviorsConstructors: BehaviorsConstructors = {
+      const behaviors: Behaviors = {
         destination: randomUtil.selectRandom(destinationBehaviors),
       }
-      const being = new Being(fuzzedGenes, behaviorsConstructors, sex, group, position);
+      const being = new Being(fuzzedGenes, behaviors, sex, group, position);
       being.destination = destination;
 
       beings.push(being);

@@ -64,8 +64,6 @@ export class Draw implements OnDestroy {
         const { position, genes: { size }} = being;
         const effectSize = size * 5;
 
-        const bornAt = Date.now();
-
         this.startPersistentEffect(2000, (ctx: CanvasRenderingContext2D) => {
           ctx.strokeStyle = '#00FF00';
           ctx.lineWidth = 2;
@@ -143,12 +141,12 @@ export class Draw implements OnDestroy {
     ctx.fillRect(x - halfSize, y - halfSize, size, size);
 
     ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.strokeRect(x - halfSize, y - halfSize, size, size);
 
     if (this.environmentService.selectedBeing()?.id == being.id) {
       ctx.strokeStyle = 'white';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 4;
       ctx.strokeRect(x - halfSize, y - halfSize, size, size);
     }
 

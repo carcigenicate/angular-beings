@@ -168,7 +168,7 @@ export class Draw implements OnDestroy {
 
       if (this.environmentService.isDebugMode()) {
         ctx.save();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.strokeStyle = 'black';
 
         ctx.beginPath();
         ctx.moveTo(being.position.x, being.position.y);

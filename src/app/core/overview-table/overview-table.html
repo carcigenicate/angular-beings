@@ -28,6 +28,7 @@
       <th pSortableColumn="genes.defense">DEF <p-sortIcon field="genes.defense"/></th>
       <th pSortableColumn="genes.size">Size <p-sortIcon field="genes.size"/></th>
       <th pSortableColumn="genes.speed">Speed <p-sortIcon field="genes.speed"/></th>
+      <th pSortableColumn="stats.damageDealt">Dmg <p-sortIcon field="stats.damageDealt"/></th>
     </tr>
   </ng-template>
 
@@ -60,6 +61,7 @@
       <td>{{ being.genes.defense  | number:'1.0-0' }}</td>
       <td>{{ being.genes.size  | number:'1.0-0' }}</td>
       <td>{{ being.genes.speed  | number:'1.0-0' }}</td>
+      <td>{{ being.stats.damageDealt  | number:'1.0-0' }}</td>
     </tr>
   </ng-template>
 </p-table>

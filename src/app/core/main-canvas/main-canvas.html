@@ -144,7 +144,8 @@
                 class="selection-panel d-flex flex-column gap-1"
               >
                 <div class="scroll-wrapper">
-                  <span>Alive For {{ being.age() | formattedAge }}</span>
+                  <div>Alive For {{ being.age() | formattedAge }}</div>
+                  <div>Damage Dealt {{ being.stats.damageDealt | number:'1.0-0' }}</div>
                   <p-divider />
                   <app-being-editor
                     [(being)]="$any(environmentService.selectedBeing)"

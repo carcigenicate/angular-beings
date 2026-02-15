@@ -128,12 +128,15 @@ export class Being {
 
   attack(target: Being) {
     if (this.genes.attack > target.genes.defense) {
-      target.health -= target.genes.attack;
+      const damage = this.genes.attack - target.genes.defense;
+      target.hurtBy(damage);
+      this.stats.damageDealt += damage;
     }
   }
 
   hurtBy(damage: number) {
-    this.health = Math.max(0, this.health - damage);
+    this.health -= damage;
+    this.stats.damageTaken += damage;
   }
 
   age(): number {

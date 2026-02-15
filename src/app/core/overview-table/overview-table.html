@@ -1,7 +1,7 @@
 <p-table
   [value]="beings()"
   dataKey="id"
-  sortField="health"
+  sortField="stats.damageDealt"
   [sortOrder]="-1"
   selectionMode="single"
   [selection]="selectedBeing()"
@@ -28,7 +28,7 @@
       <th pSortableColumn="genes.defense">DEF <p-sortIcon field="genes.defense"/></th>
       <th pSortableColumn="genes.size">Size <p-sortIcon field="genes.size"/></th>
       <th pSortableColumn="genes.speed">Speed <p-sortIcon field="genes.speed"/></th>
-      <th pSortableColumn="stats.damageDealt">Dmg <p-sortIcon field="stats.damageDealt"/></th>
+      <th pSortableColumn="stats.damageDealt">Damage <p-sortIcon field="stats.damageDealt"/></th>
     </tr>
   </ng-template>
 

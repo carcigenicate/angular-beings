@@ -106,7 +106,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   startingGenes: Genes = {
     maxHealth: 100,
-    size: 5,
+    size: 1,
     speed: 250,
     attack: config.GENE_FUZZ_AMOUNT,
     defense: config.GENE_FUZZ_AMOUNT,

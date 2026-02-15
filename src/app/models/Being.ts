@@ -130,23 +130,28 @@ export class Being {
     if (this.genes.attack > target.genes.defense) {
       const damage = this.genes.attack - target.genes.defense;
       target.hurtBy(damage);
+      this.healBy(damage / 2);
       this.stats.damageDealt += damage;
     }
   }
 
   hurtBy(damage: number) {
-    this.health -= damage;
+    this.health = Math.max(0, this.health - damage);
     this.stats.damageTaken += damage;
+  }
+
+  healBy(health: number) {
+    this.health = Math.min(this.genes.maxHealth, this.health + health);
   }
 
   age(): number {
     return Date.now() - this.bornAt;
   }
 
-  impregnate(mother: Being, pregnancyDuration: number) {
-    if (!mother.pregnancy) {
-      mother.pregnancy = {
-        father: this,
+  becomesPregnantFrom(father: Being, pregnancyDuration: number) {
+    if (!this.pregnancy) {
+      this.pregnancy = {
+        father: father,
         dueAt: Date.now() + pregnancyDuration,
       };
     }

@@ -141,7 +141,7 @@ export class Draw implements OnDestroy {
     ctx.fillRect(x - halfSize, y - halfSize, size, size);
 
     ctx.strokeStyle = 'black';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 1;
     ctx.strokeRect(x - halfSize, y - halfSize, size, size);
 
     if (this.environmentService.selectedBeing()?.id == being.id) {
@@ -164,7 +164,6 @@ export class Draw implements OnDestroy {
 
       const { position: { x, y }, genes: { size }} = being;
       const { x: destX, y: destY } = being.getDestinationPosition();
-      const halfSize = size / 2;
 
       if (this.environmentService.isDebugMode()) {
         ctx.save();

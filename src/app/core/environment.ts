@@ -88,7 +88,7 @@ export class Environment {
         if (being.sex !== collidingBeing.sex) {
           const [[male], [female]] = _.partition([being, collidingBeing], (b) => b.sex === 'male');
 
-          male.impregnate(female, config.PREGNANCY_DURATION);
+          female.becomesPregnantFrom(male, config.PREGNANCY_DURATION);
         }
       } else {
         being.attack(collidingBeing);

@@ -15,7 +15,7 @@ import { DestinationBehaviorContext } from './behaviors/destination';
 export interface EnvironmentStats {
   beingsTargetingSpace: Being[];
   beingsTargetingBeing: Being[];
-  groupCount: Record<string, number>;
+  groupCount: Record<string, { count: number, pregnant: number }>;
   sexCount: {[sex in Sex]: number};
 }
 
@@ -74,8 +74,12 @@ export class Environment {
       this.stats.beingsTargetingSpace.push(being);
     }
 
-    this.stats.groupCount[being.group] ??= 0;
-    this.stats.groupCount[being.group] += 1;
+    this.stats.groupCount[being.group] ??=  { count: 0, pregnant: 0 };
+    this.stats.groupCount[being.group].count += 1;
+
+    if (being.pregnancy) {
+      this.stats.groupCount[being.group].pregnant += 1;
+    }
 
     this.stats.sexCount[being.sex] += 1;
   }

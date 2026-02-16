@@ -13,9 +13,7 @@ import { PositionIndex } from './PositionIndex';
 import { DestinationBehaviorContext } from './behaviors/destination';
 
 export interface EnvironmentStats {
-  beingsTargetingSpace: Being[];
-  beingsTargetingBeing: Being[];
-  groupCount: Record<string, { count: number, pregnant: number }>;
+  groupCount: Record<string, { count: number, pregnant: number, notPregnantFemale: number }>;
   sexCount: {[sex in Sex]: number};
 }
 
@@ -60,25 +58,19 @@ export class Environment {
 
   resetStats() {
     this.stats = {
-      beingsTargetingBeing: [],
-      beingsTargetingSpace: [],
       groupCount: {},
       sexCount: { male: 0, female: 0 },
     };
   }
 
   recordBeingStats(being: Being) {
-    if (being.destination instanceof Being) {
-      this.stats.beingsTargetingBeing.push(being);
-    } else {
-      this.stats.beingsTargetingSpace.push(being);
-    }
-
-    this.stats.groupCount[being.group] ??=  { count: 0, pregnant: 0 };
+    this.stats.groupCount[being.group] ??=  { count: 0, pregnant: 0, notPregnantFemale: 0 };
     this.stats.groupCount[being.group].count += 1;
 
     if (being.pregnancy) {
       this.stats.groupCount[being.group].pregnant += 1;
+    } else if (being.sex === 'female') {
+      this.stats.groupCount[being.group].notPregnantFemale += 1;
     }
 
     this.stats.sexCount[being.sex] += 1;
@@ -112,14 +104,13 @@ export class Environment {
   updateBeing(being: Being, updatePercentage: number) {
     const currentTime = Date.now();
 
-    being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
-
     const ctx: DestinationBehaviorContext = {
       allBeings: this.beings(),
       positionIndex: this.positionIndex,
       world: { width: this.width, height: this.height },
     };
     being.updateDestination(ctx);
+    being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
 
     if (being.pregnancyIsDue()) {
       const child = being.produceChild();
@@ -151,7 +142,7 @@ export class Environment {
       return;
     }
 
-    if (this.beings().length > 2_000) {
+    if (this.beings().length > 20_000) {
         this.bombArea({ x: this.width / 2, y: this.height / 2 }, this.width / 2, 1000)
     }
 

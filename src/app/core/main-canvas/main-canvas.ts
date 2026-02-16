@@ -106,8 +106,8 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   startingGenes: Genes = {
     maxHealth: 100,
-    size: 1,
-    speed: 250,
+    size: 3,
+    speed: 500,
     attack: config.GENE_FUZZ_AMOUNT,
     defense: config.GENE_FUZZ_AMOUNT,
   }
@@ -127,7 +127,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(500, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createNewBeings(1_000, this.startingGenes, Object.keys(this.groupColors));
 
     this.createNewBeingModel = Being.fromRaw(beings[0]);
 

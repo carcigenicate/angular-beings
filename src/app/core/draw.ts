@@ -162,7 +162,7 @@ export class Draw implements OnDestroy {
     for (const being of beings) {
       this.frameCount.update((count) => count + 1);
 
-      const { position: { x, y }, genes: { size }} = being;
+      const { position, genes: { size }} = being;
       const { x: destX, y: destY } = being.getDestinationPosition();
 
       if (this.environmentService.isDebugMode()) {
@@ -170,7 +170,7 @@ export class Draw implements OnDestroy {
         ctx.strokeStyle = 'black';
 
         ctx.beginPath();
-        ctx.moveTo(being.position.x, being.position.y);
+        ctx.moveTo(position.x, position.y);
         ctx.lineTo(destX, destY);
         ctx.stroke();
         ctx.closePath();
@@ -178,7 +178,6 @@ export class Draw implements OnDestroy {
       }
 
       ctx.save();
-      // ctx.translate(-size, -size);
 
       this.drawBeing(being);
 

@@ -35,7 +35,7 @@ export function fuzzGenes(genes: Genes, fuzzBy: number) {
 
   for (const [geneKey, geneValue] of Object.entries(genesCopy)) {
     const rawNewGene = randUtil.randomFloat(geneValue - fuzzBy, geneValue + fuzzBy);
-    genesCopy[geneKey as keyof Genes] = _.clamp(rawNewGene, 0, 1000);
+    genesCopy[geneKey as keyof Genes] = Math.max(rawNewGene, 0);
   }
 
   return genesCopy;

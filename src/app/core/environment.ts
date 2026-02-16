@@ -11,6 +11,7 @@ import config from '../config';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { PositionIndex } from './PositionIndex';
 import { DestinationBehaviorContext } from './behaviors/destination';
+import { GameClock } from '../GameClock';
 
 export interface EnvironmentStats {
   groupCount: Record<string, { count: number, pregnant: number, notPregnantFemale: number }>;
@@ -22,10 +23,12 @@ export class Environment {
   width: number;
   height: number;
 
+  clock: GameClock = new GameClock();
+
   private stats!: EnvironmentStats;
 
   updateTimer?: ReturnType<typeof setInterval>;
-  lastUpdateTimestamp: number = Date.now().valueOf();
+  lastUpdateTimestamp: number = this.now();
 
   positionIndex!: PositionIndex;
 
@@ -37,7 +40,7 @@ export class Environment {
   currentStats = signal<EnvironmentStats>(this.stats);
   beingDied$: Subject<Being> = new Subject<Being>();
   beingBorn$: Subject<Being> = new Subject<Being>();
-  bombDetonated$: Subject<{ position: Position, diameter: number }> = new Subject<{ position: Position, diameter: number }>()
+  bombDetonated$: Subject<{ position: Position, diameter: number }> = new Subject<{ position: Position, diameter: number }>();
 
   constructor() {
     this.width = 0;
@@ -84,7 +87,7 @@ export class Environment {
         if (being.sex !== collidingBeing.sex) {
           const [[male], [female]] = _.partition([being, collidingBeing], (b) => b.sex === 'male');
 
-          female.becomesPregnantFrom(male, config.PREGNANCY_DURATION);
+          female.becomesPregnantFrom(male, this.now() + config.PREGNANCY_DURATION);
         }
       } else {
         being.attack(collidingBeing);
@@ -102,18 +105,16 @@ export class Environment {
   }
 
   updateBeing(being: Being, updatePercentage: number) {
-    const currentTime = Date.now();
-
     const ctx: DestinationBehaviorContext = {
       allBeings: this.beings(),
       positionIndex: this.positionIndex,
-      world: { width: this.width, height: this.height },
+      world: { width: this.width, height: this.height, currentTime: this.now() },
     };
     being.updateDestination(ctx);
     being.moveTowardsDestinationBy(being.genes.speed * updatePercentage);
 
-    if (being.pregnancyIsDue()) {
-      const child = being.produceChild();
+    if (being.pregnancyIsDue(this.now())) {
+      const child = being.produceChild(this.now());
       this.beings.update((beings) => {
         beings.push(child);
         return beings;
@@ -203,6 +204,10 @@ export class Environment {
     })
   }
 
+  now(): number {
+    return this.clock.now();
+  }
+
   bombArea(position: Position, diameter: number, damage: number) {
     const beingsInArea = this.positionIndex.findWithin(position, diameter / 2);
 
@@ -219,11 +224,11 @@ export class Environment {
     }
 
     this.updateTimer = setInterval(() => {
-      const currentTimestamp = Date.now().valueOf();
+      const currentTimestamp = this.now();
       const updatePerc = (currentTimestamp - this.lastUpdateTimestamp) / 1000;
 
       this.update(updatePerc);
-      this.lastUpdateTimestamp = Date.now().valueOf();
+      this.lastUpdateTimestamp = this.now();
     }, 30)
   }
 
@@ -232,13 +237,15 @@ export class Environment {
     this.updateTimer = undefined;
   }
 
-  pause() {  // FIXME: Due-at timers are don't take into consideration pausing
+  pause() {
     this.isPaused.set(true);
     this.stopUpdating();
+    this.clock.pause();
   }
 
   resume() {
     this.isPaused.set(false);
     this.startUpdating();
+    this.clock.resume();
   }
 }

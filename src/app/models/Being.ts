@@ -66,9 +66,10 @@ export class Being {
   position: Position;
   destination: Position | Being;
 
-  bornAt: number = Date.now();
+  bornAt: number;
 
-  constructor(genes: Genes, behaviors: Behaviors, sex: Sex, group: string, startingPosition: Position) {
+  constructor(bornAt: number, genes: Genes, behaviors: Behaviors, sex: Sex, group: string, startingPosition: Position) {
+    this.bornAt = bornAt;
     this.genes = _.cloneDeep(genes);
     this.behaviors = _.cloneDeep(behaviors);
 
@@ -77,21 +78,19 @@ export class Being {
     this.group = group;
     this.position = _.cloneDeep(startingPosition);
     this.destination = _.cloneDeep(startingPosition);
-
-
   }
 
-  static randomWithGenes(genes: Genes, behaviors: Behaviors, group: string, position: Position): Being {
+  static randomWithGenes(bornAt: number, genes: Genes, behaviors: Behaviors, group: string, position: Position): Being {
     const sex: Sex = randUtil.selectRandom(['male', 'female'])
-    return new Being(genes, behaviors, sex, group, position);
+    return new Being(bornAt, genes, behaviors, sex, group, position);
   }
 
   /**
    * @deprecated
    * Very unsafe. Use with caution.
    */
-  static fromRaw(raw: Pick<Being, 'genes' | 'behaviors' | 'sex' | 'group' | 'position'>): Being {
-    const instance = new Being(raw.genes, raw.behaviors, raw.sex, raw.group, raw.position);
+  static fromRaw(raw: Pick<Being, 'bornAt' | 'genes' | 'behaviors' | 'sex' | 'group' | 'position'>): Being {
+    const instance = new Being(raw.bornAt, raw.genes, raw.behaviors, raw.sex, raw.group, raw.position);
     Object.assign(instance, raw);
 
     return instance;
@@ -144,15 +143,11 @@ export class Being {
     this.health = Math.min(this.genes.maxHealth, this.health + health);
   }
 
-  age(): number {
-    return Date.now() - this.bornAt;
-  }
-
-  becomesPregnantFrom(father: Being, pregnancyDuration: number) {
+  becomesPregnantFrom(father: Being, dueAt: number) {
     if (!this.pregnancy) {
       this.pregnancy = {
         father: father,
-        dueAt: Date.now() + pregnancyDuration,
+        dueAt: dueAt,
       };
     }
   }
@@ -174,15 +169,15 @@ export class Being {
     being.familyIds.add(this.id);
   }
 
-  pregnancyIsDue() {
+  pregnancyIsDue(currentTime: number) {
     if (this.pregnancy) {
-      return this.pregnancy.dueAt < Date.now();
+      return this.pregnancy.dueAt < currentTime;
     } else {
       return false;
     }
   }
 
-  produceChild(): Being {
+  produceChild(currentTime: number): Being {
     if (!this.pregnancy) {
       throw new Error('Cannot produce a child');
     }
@@ -196,7 +191,7 @@ export class Being {
       destination: randUtil.selectRandom([this.behaviors.destination, father.behaviors.destination]),
     }
 
-    const child = Being.randomWithGenes(fuzzedGenes, behaviors, this.group, this.position);
+    const child = Being.randomWithGenes(currentTime, fuzzedGenes, behaviors, this.group, this.position);
 
     this.associateAsFamily(child);
     father.associateAsFamily(child);

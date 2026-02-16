@@ -42,6 +42,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
 import { DestinationBehavior, LimitedMemoryChaseEnemy } from '../behaviors/destination';
 import { OverviewTable } from '../overview-table/overview-table';
 import { AgePipe } from '../../pipes/age';
+import { Tag } from 'primeng/tag';
 
 type MouseMode = 'select' | 'bomb';
 type DialogView = null | 'examine-beings' | 'create-being';
@@ -81,7 +82,8 @@ const destinationBehaviors: DestinationBehavior[] = [
     OverviewTable,
     KeyValuePipe,
     AgePipe,
-    DecimalPipe
+    DecimalPipe,
+    Tag
   ],
   templateUrl: './main-canvas.html',
   styleUrl: './main-canvas.scss',
@@ -151,7 +153,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
       const behaviors: Behaviors = {
         destination: randomUtil.selectRandom(destinationBehaviors),
       }
-      const being = new Being(fuzzedGenes, behaviors, sex, group, position);
+      const being = new Being(this.environmentService.now(), fuzzedGenes, behaviors, sex, group, position);
       being.destination = destination;
 
       beings.push(being);

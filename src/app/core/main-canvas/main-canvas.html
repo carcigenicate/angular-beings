@@ -46,6 +46,7 @@
 
         <ng-template #end>
           <div class="d-flex gap-1">
+            <p-tag [value]="environmentService.now().toString()"></p-tag>
             <p-button
               label="Pause"
               styleClass="w-100"
@@ -147,7 +148,7 @@
                 class="selection-panel d-flex flex-column gap-1"
               >
                 <div class="scroll-wrapper">
-                  <div>Alive For {{ being.age() | formattedAge }}</div>
+                  <div>Alive For {{ environmentService.now() - being.bornAt | formattedAge }}</div>
                   <div>Damage Dealt {{ being.stats.damageDealt | number:'1.0-0' }}</div>
                   <p-divider />
                   <app-being-editor

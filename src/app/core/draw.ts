@@ -28,16 +28,6 @@ export class Draw implements OnDestroy {
   constructor(
     private environmentService: Environment,
   ){
-    effect(() => {
-      const isPaused = this.environmentService.isPaused();
-
-      if (isPaused) {
-        this.pause();
-      } else {
-        this.resume();
-      }
-    });
-
     this.subs.add(
       this.environmentService.beingDied$.pipe(
         filter(() => this.environmentService.isDebugMode()),
@@ -95,11 +85,13 @@ export class Draw implements OnDestroy {
   initialize(canvas: HTMLCanvasElement, groupColors: Record<string, string>) {
     this.canvas = canvas;
     this.groupColors = groupColors;
+
+    requestAnimationFrame(this.draw.bind(this));
   }
 
   startPersistentEffect(dueIn: number, drawF: DrawFunction) {
     const effect: PersistentEffect = {
-      expiresAt: Date.now() + dueIn,
+      expiresAt: this.environmentService.now() + dueIn,
       drawF: drawF,
     };
 
@@ -108,7 +100,7 @@ export class Draw implements OnDestroy {
 
   drawAndUpdateEffects() {
     const ctx = this.ctx;
-    const currentTime = Date.now();
+    const currentTime = this.environmentService.now();
 
     this.activeEffects = this.activeEffects.filter((effect) => {
       if (currentTime > effect.expiresAt) {
@@ -188,22 +180,15 @@ export class Draw implements OnDestroy {
 
     this.lastDrawTimestamp = timestamp;
 
-    if (this.isDrawing) {
+    const delay = this.environmentService.isPaused() ? 250 : 16;
+
+    setTimeout(() => {
       requestAnimationFrame(this.draw.bind(this));
-    }
+    }, delay);
   }
 
   get ctx(): CanvasRenderingContext2D {
     return this.canvas.getContext('2d') as CanvasRenderingContext2D;
-  }
-
-  pause() {
-    this.isDrawing = false;
-  }
-
-  resume() {
-    this.isDrawing = true;
-    requestAnimationFrame(this.draw.bind(this));
   }
 
   ngOnDestroy() {

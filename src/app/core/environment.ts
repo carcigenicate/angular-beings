@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { ChangeDetectorRef, Injectable, NgZone, signal } from '@angular/core';
 
 import _ from 'lodash';
 
@@ -42,7 +42,9 @@ export class Environment {
   beingBorn$: Subject<Being> = new Subject<Being>();
   bombDetonated$: Subject<{ position: Position, diameter: number }> = new Subject<{ position: Position, diameter: number }>();
 
-  constructor() {
+  constructor(
+    private cdRef: ChangeDetectorRef,
+  ) {
     this.width = 0;
     this.height = 0;
 
@@ -123,7 +125,7 @@ export class Environment {
     }
 
     if (this.isOutOfBounds(being)) {
-      being.position = { x: this.width / 2, y: this.height / 2 };
+      being.position = new Position(this.width / 2, this.height / 2);
     }
 
     this.resolveCollisions(being);
@@ -143,8 +145,8 @@ export class Environment {
       return;
     }
 
-    if (this.beings().length > 20_000) {
-        this.bombArea({ x: this.width / 2, y: this.height / 2 }, this.width / 2, 1000)
+    if (this.beings().length > 3_000) {
+        this.bombArea(new Position(this.width / 2, this.height / 2), this.width / 2, 1000)
     }
 
     this.resetStats();
@@ -184,7 +186,7 @@ export class Environment {
   }
 
   getBeingAt(x: number, y: number): Being | null {
-    return this.positionIndex.findClosestTo({ x: x, y: y}, 50);
+    return this.positionIndex.findClosestTo(new Position(x, y), 50);
   }
 
   selectBeingAt(x: number, y: number): Being | null {
@@ -229,7 +231,7 @@ export class Environment {
 
       this.update(updatePerc);
       this.lastUpdateTimestamp = this.now();
-    }, 30)
+    })
   }
 
   stopUpdating() {

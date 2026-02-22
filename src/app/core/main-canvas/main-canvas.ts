@@ -7,7 +7,7 @@ import {
   ElementRef,
   AfterViewInit,
   HostListener,
-  signal, ChangeDetectorRef, Pipe, PipeTransform
+  signal, ChangeDetectorRef, Pipe, PipeTransform, DoCheck
 } from '@angular/core';
 
 import { Environment } from '../environment';
@@ -39,10 +39,15 @@ import { InputNumber } from 'primeng/inputnumber';
 import { FormsModule } from '@angular/forms';
 import { BeingEditor } from '../being-editor/being-editor';
 import { Tab, TabList, TabPanel, TabPanels, Tabs } from 'primeng/tabs';
-import { DestinationBehavior, LimitedMemoryChaseEnemy } from '../behaviors/destination';
+import {
+  DestinationBehavior,
+  LimitedMemoryChaseEnemy,
+  LimitedMemoryChaseHomeBaseEnemy
+} from '../behaviors/destination';
 import { OverviewTable } from '../overview-table/overview-table';
 import { AgePipe } from '../../pipes/age';
 import { Tag } from 'primeng/tag';
+import { Position } from '../../models/Misc';
 
 type MouseMode = 'select' | 'bomb';
 type DialogView = null | 'examine-beings' | 'create-being';
@@ -58,10 +63,6 @@ export class EnvironmentCursorPipe implements PipeTransform {
     }
   }
 }
-
-const destinationBehaviors: DestinationBehavior[] = [
-  new LimitedMemoryChaseEnemy(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME),
-];
 
 @Component({
   selector: 'app-main-canvas',
@@ -92,7 +93,7 @@ const destinationBehaviors: DestinationBehavior[] = [
     Draw,
   ]
 })
-export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
+export class MainCanvas implements OnInit, AfterViewInit, DoCheck, OnDestroy {
   gameWidth = input.required<number>();
   gameHeight = input.required<number>();
 
@@ -108,7 +109,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
 
   startingGenes: Genes = {
     maxHealth: 100,
-    size: 3,
+    size: 5,
     speed: 500,
     attack: config.GENE_FUZZ_AMOUNT,
     defense: config.GENE_FUZZ_AMOUNT,
@@ -129,11 +130,16 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    const beings = this.createNewBeings(1_000, this.startingGenes, Object.keys(this.groupColors));
+    // const beings = this.createRandomHomeBaseBeings(1000, this.startingGenes, Object.keys(this.groupColors));
+    const beings = this.createRandomLimitedChaseBeings(1000, this.startingGenes, Object.keys(this.groupColors));
 
     this.createNewBeingModel = Being.fromRaw(beings[0]);
 
     this.environmentService.initialize(this.gameWidth(), this.gameHeight(), beings);
+  }
+
+  ngDoCheck() {
+
   }
 
   ngAfterViewInit() {
@@ -141,20 +147,58 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
     this.environmentService.resume();
   }
 
-  createNewBeings(count: number, startingGenes: Genes, groups: string[]): Being[] {
+  createRandomBaseBeing(startingGenes: Genes, groups: string[]): Being {
+    const sex: Sex = randomUtil.selectRandom(['male', 'female']);
+    const group = randomUtil.selectRandom(groups);
+    const position = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
+    const destination = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
+    const fuzzedGenes = fuzzGenes(startingGenes, config.GENE_FUZZ_AMOUNT);
+
+    const being = new Being(this.environmentService.now(), fuzzedGenes, sex, group, position);
+    being.destination = destination;
+
+    return being;
+  }
+
+  createRandomLimitedChaseBeings(count: number, startingGenes: Genes, groups: string[]): Being[] {
     const beings: Being[] = [];
     for (let n = 0; n < count; n++) {
-      const sex: Sex = randomUtil.selectRandom(['male', 'female']);
-      const group = randomUtil.selectRandom(groups);
-      const position = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
-      const destination = randomUtil.randomPosition(this.gameWidth(), this.gameHeight());
+      const being = this.createRandomBaseBeing(startingGenes, groups);
+      being.behaviors = {
+        destination: new LimitedMemoryChaseEnemy(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME),
+      };
 
-      const fuzzedGenes = fuzzGenes(startingGenes, config.GENE_FUZZ_AMOUNT);
-      const behaviors: Behaviors = {
-        destination: randomUtil.selectRandom(destinationBehaviors),
-      }
-      const being = new Being(this.environmentService.now(), fuzzedGenes, behaviors, sex, group, position);
-      being.destination = destination;
+      beings.push(being);
+    }
+
+    return beings;
+  }
+
+  createRandomHomeBaseBeings(count: number, startingGenes: Genes, groups: string[]): Being[] {
+    const randomHomeBases = randomUtil.randomDistantPointsWithin(this.gameWidth(), this.gameHeight(), groups.length, 5000);
+
+    const zippedHomeBases = _.zip(randomHomeBases, groups) as [Position, string][];
+
+    const groupHomeBases: Record<string, Position> = {};
+    for (const [homeBasePosition, group] of zippedHomeBases) {
+      this.drawService.startPersistentEffect(300000, (ctx) => {
+        ctx.strokeStyle = this.groupColors[group];
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(homeBasePosition.x, homeBasePosition.y, 20, 0,  2 * Math.PI);
+        ctx.stroke();
+      })
+
+      groupHomeBases[group] = homeBasePosition;
+    }
+
+    const beings: Being[] = [];
+    for (let n = 0; n < count; n++) {
+      const being = this.createRandomBaseBeing(startingGenes, groups);
+      const homeBasePosition = groupHomeBases[being.group];
+      being.behaviors = {
+        destination: new LimitedMemoryChaseHomeBaseEnemy(config.MIN_FOLLOWING_TIME, config.MAX_FOLLOWING_TIME, homeBasePosition, 10, 0.3),
+      };
 
       beings.push(being);
     }
@@ -193,7 +237,7 @@ export class MainCanvas implements OnInit, AfterViewInit, OnDestroy {
   }
 
   bombAreaAt(x: number, y: number) {
-    this.environmentService.bombArea({ x: x, y: y }, 500, 1000);
+    this.environmentService.bombArea(new Position(x, y), 500, 1000);
   }
 
   dialogVisibilityChanged(newVisibility: boolean) {

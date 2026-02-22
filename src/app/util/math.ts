@@ -12,8 +12,8 @@ export function clamp(n: number, min: number, max: number): number {
 }
 
 export function clampPositionToBounds(position: Position, width: number, height: number): Position {
-  return {
-    x: clamp(position.x, 0, width),
-    y: clamp(position.y, 0, height),
-  }
+  return new Position(
+    clamp(position.x, 0, width),
+    clamp(position.y, 0, height)
+  );
 }

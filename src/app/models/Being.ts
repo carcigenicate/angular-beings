@@ -20,7 +20,7 @@ export interface Genes {
 }
 
 export interface Behaviors {
-  destination: DestinationBehavior;
+  destination?: DestinationBehavior;
 }
 
 export type Sex = 'male' | 'female';
@@ -68,10 +68,10 @@ export class Being {
 
   bornAt: number;
 
-  constructor(bornAt: number, genes: Genes, behaviors: Behaviors, sex: Sex, group: string, startingPosition: Position) {
+  constructor(bornAt: number, genes: Genes, sex: Sex, group: string, startingPosition: Position, behaviors?: Behaviors) {
     this.bornAt = bornAt;
     this.genes = _.cloneDeep(genes);
-    this.behaviors = _.cloneDeep(behaviors);
+    this.behaviors = _.cloneDeep(behaviors ?? {});
 
     this.health = genes.maxHealth;
     this.sex = sex;
@@ -82,7 +82,7 @@ export class Being {
 
   static randomWithGenes(bornAt: number, genes: Genes, behaviors: Behaviors, group: string, position: Position): Being {
     const sex: Sex = randUtil.selectRandom(['male', 'female'])
-    return new Being(bornAt, genes, behaviors, sex, group, position);
+    return new Being(bornAt, genes, sex, group, position, behaviors);
   }
 
   /**
@@ -90,7 +90,7 @@ export class Being {
    * Very unsafe. Use with caution.
    */
   static fromRaw(raw: Pick<Being, 'bornAt' | 'genes' | 'behaviors' | 'sex' | 'group' | 'position'>): Being {
-    const instance = new Being(raw.bornAt, raw.genes, raw.behaviors, raw.sex, raw.group, raw.position);
+    const instance = new Being(raw.bornAt, raw.genes, raw.sex, raw.group, raw.position, raw.behaviors);
     Object.assign(instance, raw);
 
     return instance;
@@ -103,6 +103,10 @@ export class Being {
     } else {
       return this.destination;
     }
+  }
+
+  distanceToDestination(): number {
+    return mathUtil.distanceTo(this.position, this.getDestinationPosition());
   }
 
   moveTowardsDestinationBy(distance: number) {
@@ -161,7 +165,9 @@ export class Being {
   }
 
   updateDestination(ctx: DestinationBehaviorContext): void {
-    this.behaviors.destination.updateDestination(this, ctx);
+    if (this.behaviors.destination) {
+      this.behaviors.destination.updateDestination(this, ctx);
+    }
   }
 
   associateAsFamily(being: Being) {

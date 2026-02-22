@@ -46,7 +46,6 @@
 
         <ng-template #end>
           <div class="d-flex gap-1">
-            <p-tag [value]="environmentService.now().toString()"></p-tag>
             <p-button
               label="Pause"
               styleClass="w-100"
@@ -79,12 +78,6 @@
         <p-tabpanels>
           <p-tabpanel value="overview">
             @let stats = environmentService.currentStats() ?? {};
-            <div class="d-flex flex-column">
-              <div class="d-flex flex-column gap-1">
-                <span>Frame #: {{ drawService.frameCount() }}</span>
-              </div>
-            </div>
-
             <p-divider />
 
             <p-table

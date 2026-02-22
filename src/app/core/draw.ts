@@ -21,8 +21,6 @@ export class Draw implements OnDestroy {
 
   activeEffects: PersistentEffect[] = [];
 
-  frameCount = signal<number>(0);
-
   subs: Subscription = new Subscription();
 
   constructor(
@@ -152,14 +150,12 @@ export class Draw implements OnDestroy {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     for (const being of beings) {
-      this.frameCount.update((count) => count + 1);
-
       const { position, genes: { size }} = being;
       const { x: destX, y: destY } = being.getDestinationPosition();
 
       if (this.environmentService.isDebugMode()) {
         ctx.save();
-        ctx.strokeStyle = 'black';
+        ctx.strokeStyle = this.groupColors[being.group];
 
         ctx.beginPath();
         ctx.moveTo(position.x, position.y);
@@ -180,7 +176,7 @@ export class Draw implements OnDestroy {
 
     this.lastDrawTimestamp = timestamp;
 
-    const delay = this.environmentService.isPaused() ? 250 : 16;
+    const delay = this.environmentService.isPaused() ? 250 : 0;
 
     setTimeout(() => {
       requestAnimationFrame(this.draw.bind(this));

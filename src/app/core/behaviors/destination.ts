@@ -16,6 +16,7 @@ export interface DestinationBehaviorContext {
 
 export abstract class DestinationBehavior {
   abstract updateDestination(being: Being, ctx: DestinationBehaviorContext): void;
+
 }
 
 export class LimitedMemoryChaseEnemy extends DestinationBehavior {
@@ -29,7 +30,7 @@ export class LimitedMemoryChaseEnemy extends DestinationBehavior {
     this.maxFollowTime = maxFollowTime;
   }
 
-  assignNewTemporaryTargetBeing(being: Being, newTarget: Being, currentTime: number, targetFor: number = 2000) {
+  protected assignNewTemporaryTargetBeing(being: Being, newTarget: Being, currentTime: number, targetFor: number = 2000) {
     being.destination = newTarget;
 
     if (!this.forceRandomPositionAt) {
@@ -37,7 +38,7 @@ export class LimitedMemoryChaseEnemy extends DestinationBehavior {
     }
   }
 
-  private assignNewDestination(being: Being, ctx: DestinationBehaviorContext) {
+  protected assignNewDestination(being: Being, ctx: DestinationBehaviorContext) {
     const { positionIndex, world: { width, height, currentTime }} = ctx;
 
     const closestNonAlly = ctx.positionIndex.getRandomNear(being.position, Math.max(width, height) / 4, (neighbor) => {
@@ -60,9 +61,42 @@ export class LimitedMemoryChaseEnemy extends DestinationBehavior {
       being.destination = randomUtil.randomPosition(width, height);
       this.forceRandomPositionAt = null;
     } else {
-      if (mathUtil.distanceTo(being.position, being.getDestinationPosition()) <= 1) {
+      if (being.distanceToDestination() <= 1) {
         this.assignNewDestination(being, ctx);
       }
+    }
+  }
+}
+
+export class LimitedMemoryChaseHomeBaseEnemy extends LimitedMemoryChaseEnemy {
+  homeBasePosition: Position;
+  variation: number;
+  targetHomeBaseChance: number;
+
+  constructor(minFollowTime: number, maxFollowTime: number, homeBasePosition: Position, variation: number, targetHomeBaseChance: number) {
+    super(minFollowTime, maxFollowTime);
+    this.homeBasePosition = homeBasePosition;
+    this.variation = variation;
+    this.targetHomeBaseChance = targetHomeBaseChance;
+  }
+
+  override assignNewDestination(being: Being, ctx: DestinationBehaviorContext) {
+    const { world: { width, height } } = ctx;
+    const { x: hx, y: hy } = this.homeBasePosition;
+
+    const halfVariation = this.variation / 2;
+
+    if (being.destination instanceof Position && being.destination.inWithin(hx - halfVariation, hx + halfVariation, hy - halfVariation, hx + halfVariation)) {
+      super.assignNewDestination(being, ctx);
+    } else if (randomUtil.randomChance(this.targetHomeBaseChance)) {
+      const newPosition = new Position(
+        randomUtil.randomInt(hx - halfVariation, hx + halfVariation),
+        randomUtil.randomInt(hy - halfVariation, hy + halfVariation),
+      );
+
+      being.destination = mathUtil.clampPositionToBounds(newPosition, width, height);
+    } else {
+      super.assignNewDestination(being, ctx);
     }
   }
 }

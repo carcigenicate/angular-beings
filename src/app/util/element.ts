@@ -5,5 +5,5 @@ export function getClickPosition(canvas: HTMLCanvasElement, clickEvent: MouseEve
   const x = clickEvent.clientX - bounds.left;
   const y = clickEvent.clientY - bounds.top;
 
-  return { x: x, y: y };
+  return new Position(x, y);
 }

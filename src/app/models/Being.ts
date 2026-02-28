@@ -147,6 +147,14 @@ export class Being {
     this.health = Math.min(this.genes.maxHealth, this.health + health);
   }
 
+  age(currentTime: number): number {
+    return currentTime - this.bornAt;
+  }
+
+  isMature(currentTime: number) {
+    return this.age(currentTime) > config.MATURE_TIME;
+  }
+
   becomesPregnantFrom(father: Being, dueAt: number) {
     if (!this.pregnancy) {
       this.pregnancy = {

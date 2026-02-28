@@ -82,14 +82,17 @@ export class Environment {
   }
 
   resolveCollisions(being: Being) {
+    const now = this.now();
+    const currentIsMature = being.isMature(now);
+
     const allCollidingBeings = this.positionIndex.findColliding(being);
 
     for (const collidingBeing of allCollidingBeings) {
       if (being.group === collidingBeing.group) {
-        if (being.sex !== collidingBeing.sex) {
+        if (being.sex !== collidingBeing.sex && currentIsMature && collidingBeing.isMature(now)) {
           const [[male], [female]] = _.partition([being, collidingBeing], (b) => b.sex === 'male');
 
-          female.becomesPregnantFrom(male, this.now() + config.PREGNANCY_DURATION);
+          female.becomesPregnantFrom(male, now + config.PREGNANCY_DURATION);
         }
       } else {
         being.attack(collidingBeing);

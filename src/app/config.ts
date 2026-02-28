@@ -7,4 +7,5 @@ export default {
   GENE_FUZZ_AMOUNT: 2,
 
   MATURE_TIME: 20_000,
+  MATURE_TIME: 10_000,
 }
